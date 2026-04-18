@@ -5,14 +5,43 @@
 - １週間分の買い物リストを容易に作成できるようにしたい。
 - 買い物中も容易に購入リストに済みのチェックを付けられるようにしたい。
 
-## 機能
+## ユーザーストーリー
+
+### 買い物リストを作りたい
+
+- 買い物をする人として、１週間分の買い物リストを作りたい。
+- 買い物をする人として、商品を追加してリストを増やしたい。
+- 買い物をする人として、よく買う定番品をすぐに追加したい。
+- 買い物をする人として、音声入力で素早く商品を追加したい。
+
+### 料理からまとめて登録したい
+
+- 買い物をする人として、料理名から関連する複数の商品をまとめて追加したい。
+- 買い物をする人として、商品名の候補から選んで、料理グループにひも付けたい。
+- 買い物をする人として、料理グループに登録した商品を次回以降も再利用したい。
+
+### 買い物中に素早く完了したい
+
+- 買い物をする人として、済んだ商品にチェックを付けたい。
+- 買い物をする人として、左フリックで商品を購入済みにしたい。
+- 買い物をする人として、購入済みの商品を一覧から非表示にしたい。
+- 買い物をする人として、画面下部で１件削除と元に戻すをすぐ使いたい。
+- 買い物をする人として、元に戻す操作で購入済みにした商品をリストへ戻したい。
+
+### 管理しやすくしたい
+
+- 買い物をする人として、商品をカテゴリ順に並べて見たい。
+- 買い物をする人として、１週間分の全商品をまとめて確認したい。
+- 買い物をする人として、カテゴリの並び順を変更したい。
+- 買い物をする人として、商品カテゴリを追加・変更・削除したい。
+
+## 機能要約
 
 - １週間分のリストを作る。
-- 商品名を追加する
-- 追加した商品名を選択して、料理名から選択した複数の商品名をグループ化する。料理名を追加するとリストにはグループ化した商品名がリストに追加する
-- 済んだものにチェックを付ける
-- 購入時リスト
-  - フリックして購入済みに、Gmailみたいに１件削除と元に戻すを画面下部に表示する。元に戻すをタップすると購入済みにしたものをリストに戻す
+- 商品名を追加する。
+- 料理名から選択した複数の商品名をグループ化する。
+- 済んだものにチェックを付ける。
+- 購入時リストでは、左フリックで購入済みにし、画面下部に１件削除と元に戻すを表示する。
 
 **画面構成**
 - １週間分入力画面
@@ -186,3 +215,97 @@ Flutter の状態管理も相性がよくて、例えばこういう状態で持
 - 左フリックで購入済みにして一覧から消す
 - 画面下部に Gmail 風の削除と元に戻すを出す
 - 元に戻すで、購入済みにした商品を元のリストへ戻す
+
+### ER図案
+
+Flutter + Drift で持ちやすいように、まずは「カテゴリ」「商品マスタ」「週間リスト」「週間リスト明細」「料理グループ」を中心にした構成にする。
+
+商品自動入力時は、まず `ITEM_MASTER` を検索し、候補が見つからない場合はその場で新規登録を促す。登録確定後に `ITEM_MASTER` を作成し、そのまま `WEEK_LIST_ITEM` に紐づける。以後はその商品を次回以降の候補として再利用する。
+
+```mermaid
+erDiagram
+  CATEGORY ||--o{ ITEM_MASTER : contains
+  WEEK_LIST ||--o{ WEEK_LIST_ITEM : has
+  ITEM_MASTER ||--o{ WEEK_LIST_ITEM : selected_as
+  RECIPE_GROUP ||--o{ RECIPE_GROUP_ITEM : includes
+  ITEM_MASTER ||--o{ RECIPE_GROUP_ITEM : used_by
+
+  CATEGORY {
+    int id PK
+    string name
+    int sort_order
+    bool is_active
+    datetime created_at
+    datetime updated_at
+  }
+
+  ITEM_MASTER {
+    int id PK
+    int category_id FK
+    string name
+    string default_unit
+    int sort_order
+    bool is_favorite
+    bool is_active
+    datetime created_at
+    datetime updated_at
+  }
+
+  WEEK_LIST {
+    int id PK
+    date week_start_date
+    string title
+    datetime created_at
+    datetime updated_at
+  }
+
+  WEEK_LIST_ITEM {
+    int id PK
+    int week_list_id FK
+    int item_master_id FK
+    string display_name
+    string quantity
+    string unit
+    string meal_slot
+    int sort_order
+    bool is_purchased
+    bool is_deleted
+    datetime purchased_at
+    datetime created_at
+    datetime updated_at
+  }
+
+  RECIPE_GROUP {
+    int id PK
+    string name
+    int sort_order
+    bool is_active
+    datetime created_at
+    datetime updated_at
+  }
+
+  RECIPE_GROUP_ITEM {
+    int id PK
+    int recipe_group_id FK
+    int item_master_id FK
+    string quantity
+    string unit
+    int sort_order
+    datetime created_at
+    datetime updated_at
+  }
+```
+
+この ER の意図は次の通り。
+
+- `CATEGORY` は商品カテゴリの並び順を管理する
+- `ITEM_MASTER` は「牛乳」「卵」などの定番商品や候補一覧を管理する
+- `ITEM_MASTER` に存在しない商品は、自動入力の流れの中で新規登録してから使う
+- 新規登録された商品は次回から候補に表示される
+- `WEEK_LIST` は1週間単位の買い物リストのヘッダとして扱う
+- `WEEK_LIST_ITEM` は実際の買い物対象で、購入済み・削除済み・表示順を持つ
+- `RECIPE_GROUP` と `RECIPE_GROUP_ITEM` は、料理名から複数商品をまとめて追加するためのひも付けを持つ
+
+`meal_slot` は朝・昼・夜の区分を残す場合に使えるが、将来不要になれば空運用か削除してもよい。
+
+購入済みを左フリックで一覧から消して、元に戻す操作は、基本的には `WEEK_LIST_ITEM.is_purchased` と `is_deleted` の状態で表現する。画面下部の Gmail 風バーは UI の undo であり、必須の履歴テーブルではない。
