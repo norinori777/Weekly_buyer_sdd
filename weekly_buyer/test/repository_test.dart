@@ -66,7 +66,7 @@ void main() {
     expect(snapshot.hiddenPurchasedCount, 1);
     expect(snapshot.sections.firstWhere((section) => section.section == ShoppingSection.other).items, isEmpty);
 
-    final reverted = await repository.undoLatestPurchase();
+    final reverted = await repository.undoLatestPurchase(DateTime(2026, 4, 22));
     expect(reverted, isNotNull);
 
     snapshot = await repository.loadWeek(DateTime(2026, 4, 22));

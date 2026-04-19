@@ -13,26 +13,30 @@ class PurchaseListDestination extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(selectedWeekDateProvider);
     final snapshot = ref.watch(weeklyShoppingSnapshotProvider(selectedDate));
+    final bottomBanner = snapshot.maybeWhen(
+      data: (data) {
+        if (data.hiddenPurchasedCount == 0 && data.lastPurchasedItem == null) {
+          return const SizedBox.shrink();
+        }
+
+        return SafeArea(
+          minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: UndoBanner(
+            hiddenPurchasedCount: data.hiddenPurchasedCount,
+            lastPurchasedItem: data.lastPurchasedItem,
+            onUndo: () async {
+              await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase(selectedDate);
+              ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
+            },
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('購入リスト'),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final snapshotData = await ref.read(weeklyShoppingSnapshotProvider(selectedDate).future);
-          if (!context.mounted) {
-            return;
-          }
-          await _openAddSheet(
-            context: context,
-            ref: ref,
-            initialSection: ShoppingSection.morning,
-            candidates: snapshotData.candidates,
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('商品を追加'),
       ),
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -53,17 +57,6 @@ class PurchaseListDestination extends ConsumerWidget {
                   ref.read(selectedWeekDateProvider.notifier).state = dateOnly(date);
                 },
               ),
-              if (data.hiddenPurchasedCount > 0 || data.lastPurchasedItem != null) ...[
-                const SizedBox(height: 16),
-                UndoBanner(
-                  hiddenPurchasedCount: data.hiddenPurchasedCount,
-                  lastPurchasedItem: data.lastPurchasedItem,
-                  onUndo: () async {
-                    await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase();
-                    ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
-                  },
-                ),
-              ],
               const SizedBox(height: 16),
               for (final section in data.sections) ...[
                 ShoppingSectionView(
@@ -90,7 +83,7 @@ class PurchaseListDestination extends ConsumerWidget {
                           action: SnackBarAction(
                             label: '元に戻す',
                             onPressed: () async {
-                              await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase();
+                              await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase(selectedDate);
                               ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
                             },
                           ),
@@ -104,6 +97,7 @@ class PurchaseListDestination extends ConsumerWidget {
           );
         },
       ),
+      bottomNavigationBar: bottomBanner,
     );
   }
 

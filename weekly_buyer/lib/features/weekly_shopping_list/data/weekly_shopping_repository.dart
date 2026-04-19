@@ -15,7 +15,6 @@ class WeeklyShoppingRepository {
 
     final categories = await _loadCategories();
     final categoryNames = {for (final category in categories) category.id: category.name};
-
     final itemMasters = await _loadItemMasters();
 
     final rawItems = await (_database.select(_database.weeklyListItems)
@@ -51,8 +50,7 @@ class WeeklyShoppingRepository {
         )
         .toList();
 
-    final hiddenPurchasedCount = entries.where((item) => item.isPurchased).length;
-    final lastPurchasedItem = entries.where((item) => item.isPurchased).toList()
+    final purchasedEntries = entries.where((item) => item.isPurchased).toList()
       ..sort((left, right) => right.sortOrder.compareTo(left.sortOrder));
 
     return WeeklyShoppingSnapshot(
@@ -60,8 +58,8 @@ class WeeklyShoppingRepository {
       selectedDate: dateOnly(referenceDate),
       categories: categories,
       sections: sections,
-      hiddenPurchasedCount: hiddenPurchasedCount,
-      lastPurchasedItem: lastPurchasedItem.isEmpty ? null : lastPurchasedItem.first,
+      hiddenPurchasedCount: purchasedEntries.length,
+      lastPurchasedItem: purchasedEntries.isEmpty ? null : purchasedEntries.first,
       candidates: itemMasters,
     );
   }
@@ -81,8 +79,8 @@ class WeeklyShoppingRepository {
     final candidate = await _findCandidateByName(normalizedName);
     final itemMasterId = request.itemMasterId ?? candidate?.id;
     final categoryId = request.categoryId ?? candidate?.categoryId;
-
     final nextSortOrder = await _nextItemSortOrder(weeklyList.id, request.section);
+
     await _database.into(_database.weeklyListItems).insert(
           WeeklyListItemsCompanion.insert(
             weeklyListId: weeklyList.id,
@@ -125,9 +123,17 @@ class WeeklyShoppingRepository {
     );
   }
 
-  Future<ShoppingItemEntry?> undoLatestPurchase() async {
+  Future<ShoppingItemEntry?> undoLatestPurchase(DateTime referenceDate) async {
+    final weekStart = startOfWeek(referenceDate);
+    final weeklyList = await (_database.select(_database.weeklyLists)
+          ..where((table) => table.weekStart.equals(weekStart)))
+        .getSingleOrNull();
+    if (weeklyList == null) {
+      return null;
+    }
+
     final latest = await (_database.select(_database.weeklyListItems)
-          ..where((table) => table.isPurchased.equals(true))
+          ..where((table) => table.weeklyListId.equals(weeklyList.id) & table.isPurchased.equals(true))
           ..orderBy([
             (table) => OrderingTerm(expression: table.purchasedAt, mode: OrderingMode.desc),
             (table) => OrderingTerm(expression: table.sortOrder, mode: OrderingMode.desc),
@@ -168,9 +174,7 @@ class WeeklyShoppingRepository {
       return allCandidates;
     }
 
-    return allCandidates
-        .where((candidate) => candidate.name.toLowerCase().contains(normalized))
-        .toList();
+    return allCandidates.where((candidate) => candidate.name.toLowerCase().contains(normalized)).toList();
   }
 
   Future<WeeklyList> _ensureWeeklyList(DateTime weekStart, DateTime weekEnd) async {
@@ -249,10 +253,13 @@ class WeeklyShoppingRepository {
           ..orderBy([(table) => OrderingTerm(expression: table.sortOrder, mode: OrderingMode.desc)])
           ..limit(1))
         .getSingleOrNull();
-    return latestSortOrder?.sortOrder ?? 0;
+    return (latestSortOrder?.sortOrder ?? 0) + 1;
   }
 
   ShoppingSection _sectionFromStoredValue(String value) {
-    return ShoppingSection.values.firstWhere((section) => section.name == value, orElse: () => ShoppingSection.other);
+    return ShoppingSection.values.firstWhere(
+      (section) => section.name == value,
+      orElse: () => ShoppingSection.other,
+    );
   }
 }

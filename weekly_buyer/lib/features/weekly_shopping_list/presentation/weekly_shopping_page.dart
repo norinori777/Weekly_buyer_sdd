@@ -55,7 +55,7 @@ class _WeeklyShoppingPageState extends ConsumerState<WeeklyShoppingPage> {
                   hiddenPurchasedCount: data.hiddenPurchasedCount,
                   lastPurchasedItem: data.lastPurchasedItem,
                   onUndo: () async {
-                    await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase();
+                    await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase(_selectedDate);
                     ref.invalidate(weeklyShoppingSnapshotProvider(_selectedDate));
                   },
                 ),
@@ -81,7 +81,7 @@ class _WeeklyShoppingPageState extends ConsumerState<WeeklyShoppingPage> {
                           action: SnackBarAction(
                             label: '元に戻す',
                             onPressed: () async {
-                              await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase();
+                              await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase(_selectedDate);
                               ref.invalidate(weeklyShoppingSnapshotProvider(_selectedDate));
                             },
                           ),
@@ -280,9 +280,40 @@ class ShoppingSectionView extends StatelessWidget {
               )
             else
               for (final item in items) ...[
-                ShoppingItemTile(
-                  item: item,
-                  onTogglePurchased: () => onTogglePurchased(item),
+                Dismissible(
+                  key: ValueKey('shopping-item-${item.id}'),
+                  direction: DismissDirection.endToStart,
+                  secondaryBackground: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Icon(Icons.archive_outlined, color: Theme.of(context).colorScheme.onErrorContainer),
+                            const SizedBox(width: 8),
+                            Text(
+                              '購入済み',
+                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                    color: Theme.of(context).colorScheme.onErrorContainer,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  background: const SizedBox.shrink(),
+                  onDismissed: (_) => onTogglePurchased(item),
+                  child: ShoppingItemTile(
+                    item: item,
+                    onTogglePurchased: () => onTogglePurchased(item),
+                  ),
                 ),
                 const SizedBox(height: 8),
               ],

@@ -23,7 +23,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('購入リスト'), findsWidgets);
-    expect(find.text('商品を追加'), findsOneWidget);
+    expect(find.text('商品追加'), findsOneWidget);
 
     await tester.tap(find.text('商品追加').first);
     await tester.pumpAndSettle();
@@ -33,6 +33,6 @@ void main() {
     await tester.tap(find.text('購入リスト').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('商品を追加'), findsOneWidget);
+    expect(find.text('商品追加'), findsOneWidget);
   });
 }
