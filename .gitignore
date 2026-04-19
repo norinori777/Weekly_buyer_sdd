@@ -1,0 +1,20 @@
+# Spec Kit / local workspace files
+.specify/
+.vscode/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+
+# Flutter / Dart generated files
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub/
+**/.pub-cache/
+**/build/
+**/coverage/
+
+# Generated package metadata
+*.iml
