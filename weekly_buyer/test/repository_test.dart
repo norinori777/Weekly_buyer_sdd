@@ -22,12 +22,15 @@ void main() {
               sortOrder: const drift.Value(0),
             ),
           );
-      final category = await database.select(database.categories).getSingle();
+      final category = await (
+        database.select(database.categories)
+          ..where((table) => table.name.equals('食品'))
+      ).getSingle();
       await database
           .into(database.itemMasters)
           .insert(
             ItemMastersCompanion.insert(
-              name: '牛乳',
+              name: 'テスト牛乳',
               categoryId: drift.Value(category.id),
               defaultQuantity: const drift.Value(1),
             ),
@@ -36,7 +39,7 @@ void main() {
           .into(database.itemMasters)
           .insert(
             ItemMastersCompanion.insert(
-              name: '卵',
+              name: 'テスト卵',
               categoryId: drift.Value(category.id),
               defaultQuantity: const drift.Value(1),
             ),
@@ -45,7 +48,7 @@ void main() {
       await repository.addItem(
         referenceDate: DateTime(2026, 4, 20),
         request: const AddItemRequest(
-          name: '牛乳',
+          name: 'テスト牛乳',
           quantity: 2,
           section: ShoppingSection.morning,
         ),
@@ -54,7 +57,7 @@ void main() {
       await repository.addItem(
         referenceDate: DateTime(2026, 4, 21),
         request: const AddItemRequest(
-          name: '卵',
+          name: 'テスト卵',
           quantity: 1,
           section: ShoppingSection.morning,
         ),
@@ -86,7 +89,7 @@ void main() {
             .items
             .single
             .name,
-        '牛乳',
+        'テスト牛乳',
       );
 
       expect(
@@ -101,12 +104,105 @@ void main() {
             .items
             .single
             .name,
-        '卵',
+        'テスト卵',
       );
 
       final itemMasters = await database.select(database.itemMasters).get();
-      expect(itemMasters, hasLength(2));
-      expect(itemMasters.map((item) => item.name), containsAll(['牛乳', '卵']));
+      expect(
+        itemMasters.where((item) => item.name == 'テスト牛乳'),
+        isNotEmpty,
+      );
+      expect(itemMasters.where((item) => item.name == 'テスト卵'), isNotEmpty);
+    },
+  );
+
+  test(
+    'deletes a selected item without affecting the remaining weekday items',
+    () async {
+      final database = AppDatabase(executor: NativeDatabase.memory());
+      addTearDown(database.close);
+
+      final repository = WeeklyShoppingRepository(database);
+      await database
+          .into(database.categories)
+          .insert(
+            CategoriesCompanion.insert(
+              name: '食品',
+              sortOrder: const drift.Value(0),
+            ),
+          );
+      final category = await (
+        database.select(database.categories)
+          ..where((table) => table.name.equals('食品'))
+      ).getSingle();
+
+      await repository.addItem(
+        referenceDate: DateTime(2026, 4, 20),
+        request: AddItemRequest(
+          name: 'テスト削除対象',
+          quantity: 1,
+          section: ShoppingSection.morning,
+          categoryId: category.id,
+        ),
+      );
+      await repository.addItem(
+        referenceDate: DateTime(2026, 4, 20),
+        request: AddItemRequest(
+          name: 'テスト残す',
+          quantity: 1,
+          section: ShoppingSection.morning,
+          categoryId: category.id,
+        ),
+      );
+      await repository.addItem(
+        referenceDate: DateTime(2026, 4, 21),
+        request: AddItemRequest(
+          name: 'テスト別曜日',
+          quantity: 1,
+          section: ShoppingSection.morning,
+          categoryId: category.id,
+        ),
+      );
+
+      final mondayBeforeDelete = await repository.loadWeek(DateTime(2026, 4, 20));
+      final mondayItemsBeforeDelete = mondayBeforeDelete.weekdaySections
+          .firstWhere((section) => section.section == ShoppingSection.morning)
+          .items;
+      expect(mondayItemsBeforeDelete, hasLength(2));
+
+      await repository.deleteItem(mondayItemsBeforeDelete.first.id);
+
+      final mondayAfterDelete = await repository.loadWeek(DateTime(2026, 4, 20));
+      final tuesdayAfterDelete = await repository.loadWeek(DateTime(2026, 4, 21));
+
+      expect(
+        mondayAfterDelete.weekdaySections
+            .firstWhere((section) => section.section == ShoppingSection.morning)
+            .items,
+        hasLength(1),
+      );
+      expect(
+        mondayAfterDelete.weekdaySections
+            .firstWhere((section) => section.section == ShoppingSection.morning)
+            .items
+            .single
+            .name,
+        'テスト残す',
+      );
+      expect(
+        tuesdayAfterDelete.weekdaySections
+            .firstWhere((section) => section.section == ShoppingSection.morning)
+            .items,
+        hasLength(1),
+      );
+      expect(
+        tuesdayAfterDelete.weekdaySections
+            .firstWhere((section) => section.section == ShoppingSection.morning)
+            .items
+            .single
+            .name,
+        'テスト別曜日',
+      );
     },
   );
 

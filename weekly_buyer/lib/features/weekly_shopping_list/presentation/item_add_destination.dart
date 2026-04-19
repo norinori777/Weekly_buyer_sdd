@@ -49,6 +49,12 @@ class ItemAddDestination extends ConsumerWidget {
               )) ...[
                 _SectionPreviewCard(
                   section: section,
+                  onDeleteItem: (item) async {
+                    await ref
+                        .read(weeklyShoppingRepositoryProvider)
+                        .deleteItem(item.id);
+                    ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
+                  },
                   items: data.weekdaySections
                       .firstWhere((entry) => entry.section == section)
                       .items,
@@ -133,10 +139,15 @@ class ItemAddDestination extends ConsumerWidget {
 }
 
 class _SectionPreviewCard extends StatelessWidget {
-  const _SectionPreviewCard({required this.section, required this.items});
+  const _SectionPreviewCard({
+    required this.section,
+    required this.items,
+    required this.onDeleteItem,
+  });
 
   final ShoppingSection section;
   final List<ShoppingItemEntry> items;
+  final Future<void> Function(ShoppingItemEntry item) onDeleteItem;
 
   @override
   Widget build(BuildContext context) {
@@ -173,6 +184,15 @@ class _SectionPreviewCard extends StatelessWidget {
                   ),
                   title: Text(item.name),
                   subtitle: Text('数量 ${item.quantity}'),
+                  trailing: IconButton(
+                    tooltip: '削除',
+                    onPressed: () => onDeleteItem(item),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
                 const Divider(height: 1),
               ],

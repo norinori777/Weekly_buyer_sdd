@@ -144,6 +144,12 @@ class WeeklyShoppingRepository {
     }
   }
 
+  Future<void> deleteItem(int itemId) async {
+    await (_database.delete(
+      _database.weeklyListItems,
+    )..where((table) => table.id.equals(itemId))).go();
+  }
+
   Future<void> togglePurchased(int itemId) async {
     final item = await (_database.select(
       _database.weeklyListItems,

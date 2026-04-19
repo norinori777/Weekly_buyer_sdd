@@ -67,7 +67,7 @@ void main() {
       database,
       referenceDate: today,
       categoryName: '食品',
-      itemName: '牛乳',
+      itemName: 'テスト牛乳',
     );
 
     await tester.pumpWidget(
@@ -80,13 +80,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('食品 1件'), findsOneWidget);
-    expect(find.text('牛乳'), findsOneWidget);
+    expect(find.text('テスト牛乳'), findsOneWidget);
     expect(find.text('追加'), findsNothing);
 
-    await tester.drag(find.text('牛乳'), const Offset(-500, 0));
+    await tester.drag(find.text('テスト牛乳'), const Offset(-500, 0));
     await tester.pumpAndSettle();
 
-    expect(find.text('牛乳'), findsNothing);
+    expect(find.text('テスト牛乳'), findsNothing);
   });
 
   testWidgets('shows only items for the selected weekday', (
@@ -103,13 +103,13 @@ void main() {
       database,
       referenceDate: mondayDate,
       categoryName: '食品',
-      itemName: '牛乳',
+      itemName: 'テスト牛乳',
     );
     await _seedWeeklyItem(
       database,
       referenceDate: tuesdayDate,
       categoryName: '食品',
-      itemName: '卵',
+      itemName: 'テスト卵',
     );
 
     await tester.pumpWidget(
@@ -127,8 +127,8 @@ void main() {
     await tester.tap(find.byType(ChoiceChip).at(0));
     await tester.pumpAndSettle();
 
-    expect(find.text('牛乳'), findsOneWidget);
-    expect(find.text('卵'), findsNothing);
+    expect(find.text('テスト牛乳'), findsOneWidget);
+    expect(find.text('テスト卵'), findsNothing);
 
     await tester.fling(find.byType(WeekHeader), const Offset(-400, 0), 1000);
     await tester.pumpAndSettle();
@@ -137,8 +137,8 @@ void main() {
       find.byType(ChoiceChip).at(1),
     );
     expect(selectedChip.selected, isTrue);
-    expect(find.text('卵'), findsOneWidget);
-    expect(find.text('牛乳'), findsNothing);
+    expect(find.text('テスト卵'), findsOneWidget);
+    expect(find.text('テスト牛乳'), findsNothing);
   });
 
   testWidgets('saves a new item to the selected weekday only', (
@@ -154,7 +154,7 @@ void main() {
       database,
       referenceDate: mondayDate,
       categoryName: '食品',
-      itemName: '牛乳',
+      itemName: 'テスト牛乳',
     );
 
     await tester.pumpWidget(
@@ -178,19 +178,63 @@ void main() {
     await tester.tap(find.text('商品を追加'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).at(0), '豆腐');
+    await tester.enterText(find.byType(TextField).at(0), 'テスト豆腐');
     await tester.enterText(find.byType(TextField).at(1), '2');
     await tester.tap(find.text('登録する'));
     await tester.pumpAndSettle();
 
-    expect(find.text('豆腐'), findsOneWidget);
-    expect(find.text('牛乳'), findsNothing);
+    expect(find.text('テスト豆腐'), findsOneWidget);
+    expect(find.text('テスト牛乳'), findsNothing);
 
     await tester.tap(find.byType(ChoiceChip).at(0));
     await tester.pumpAndSettle();
 
-    expect(find.text('豆腐'), findsNothing);
-    expect(find.text('牛乳'), findsOneWidget);
+    expect(find.text('テスト豆腐'), findsNothing);
+    expect(find.text('テスト牛乳'), findsOneWidget);
+  });
+
+  testWidgets('shows delete controls and removes a row from the add screen', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final today = dateOnly(DateTime.now());
+    final mondayDate = startOfWeek(today);
+
+    await _seedWeeklyItem(
+      database,
+      referenceDate: mondayDate,
+      categoryName: '食品',
+      itemName: 'テスト削除対象',
+    );
+    await _seedWeeklyItem(
+      database,
+      referenceDate: mondayDate,
+      categoryName: '食品',
+      itemName: 'テスト残す',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.close_rounded), findsNWidgets(2));
+
+    await tester.tap(find.byIcon(Icons.close_rounded).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('テスト削除対象'), findsNothing);
+    expect(find.text('テスト残す'), findsOneWidget);
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
   testWidgets(
@@ -207,7 +251,7 @@ void main() {
         database,
         referenceDate: mondayDate,
         categoryName: '食品',
-        itemName: '食パン',
+        itemName: 'テスト食パン',
       );
 
       await tester.pumpWidget(
