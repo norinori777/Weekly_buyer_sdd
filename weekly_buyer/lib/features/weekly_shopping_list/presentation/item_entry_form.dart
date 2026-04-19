@@ -14,6 +14,7 @@ class ItemEntryForm extends StatefulWidget {
     this.submitLabel = '追加',
     this.showCancelButton = true,
     this.maxCandidateListHeight = 160,
+    this.sectionOptions = ShoppingSection.values,
   });
 
   final List<ItemCandidate> candidates;
@@ -24,6 +25,7 @@ class ItemEntryForm extends StatefulWidget {
   final String submitLabel;
   final bool showCancelButton;
   final double maxCandidateListHeight;
+  final List<ShoppingSection> sectionOptions;
 
   @override
   State<ItemEntryForm> createState() => _ItemEntryFormState();
@@ -141,7 +143,7 @@ class _ItemEntryFormState extends State<ItemEntryForm> {
           spacing: 8,
           runSpacing: 8,
           children: [
-            for (final section in ShoppingSection.values)
+            for (final section in widget.sectionOptions)
               ChoiceChip(
                 selected: _selectedSection == section,
                 label: Text(section.label),

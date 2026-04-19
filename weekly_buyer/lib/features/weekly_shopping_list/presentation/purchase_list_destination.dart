@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
 import '../domain/weekly_shopping_models.dart';
-import 'item_entry_form.dart';
-import 'weekly_shopping_page.dart' show ShoppingSectionView, UndoBanner, WeekHeader;
+import 'weekly_shopping_page.dart' show UndoBanner;
 
 class PurchaseListDestination extends ConsumerWidget {
   const PurchaseListDestination({super.key});
@@ -47,27 +46,14 @@ class PurchaseListDestination extends ConsumerWidget {
           ),
         ),
         data: (data) {
+          final showBottomBanner = data.hiddenPurchasedCount > 0 || data.lastPurchasedItem != null;
+
           return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 112),
+            padding: EdgeInsets.fromLTRB(16, 16, 16, showBottomBanner ? 112 : 16),
             children: [
-              WeekHeader(
-                weekRange: data.weekRange,
-                selectedDate: selectedDate,
-                onDateSelected: (date) {
-                  ref.read(selectedWeekDateProvider.notifier).state = dateOnly(date);
-                },
-              ),
-              const SizedBox(height: 16),
-              for (final section in data.sections) ...[
-                ShoppingSectionView(
-                  section: section.section,
-                  items: section.items,
-                  onAdd: () => _openAddSheet(
-                    context: context,
-                    ref: ref,
-                    initialSection: section.section,
-                    candidates: data.candidates,
-                  ),
+              for (final group in data.categoryGroups) ...[
+                _CategoryGroupCard(
+                  group: group,
                   onTogglePurchased: (item) async {
                     final messenger = ScaffoldMessenger.of(context);
                     await ref.read(weeklyShoppingRepositoryProvider).togglePurchased(item.id);
@@ -93,6 +79,11 @@ class PurchaseListDestination extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
               ],
+              if (data.categoryGroups.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 32),
+                  child: Center(child: Text('今週の購入リストはまだありません。')),
+                ),
             ],
           );
         },
@@ -100,46 +91,102 @@ class PurchaseListDestination extends ConsumerWidget {
       bottomNavigationBar: bottomBanner,
     );
   }
+}
 
-  Future<void> _openAddSheet({
-    required BuildContext context,
-    required WidgetRef ref,
-    required ShoppingSection initialSection,
-    required List<ItemCandidate> candidates,
-  }) async {
-    final request = await showModalBottomSheet<AddItemRequest>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (sheetContext) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
-            top: 8,
-          ),
-          child: SingleChildScrollView(
-            child: ItemEntryForm(
-              candidates: candidates,
-              initialValue: ItemAddDraft(section: initialSection),
-              onCancel: () => Navigator.of(sheetContext).pop(),
-              onSubmit: (request) => Navigator.of(sheetContext).pop(request),
+class _CategoryGroupCard extends StatelessWidget {
+  const _CategoryGroupCard({
+    required this.group,
+    required this.onTogglePurchased,
+  });
+
+  final ShoppingCategoryGroup group;
+  final Future<void> Function(ShoppingItemEntry) onTogglePurchased;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${group.categoryName} ${group.items.length}件',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 12),
+            for (final item in group.items) ...[
+              Dismissible(
+                key: ValueKey('shopping-item-${item.id}'),
+                direction: DismissDirection.endToStart,
+                secondaryBackground: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Icon(Icons.archive_outlined, color: Theme.of(context).colorScheme.onErrorContainer),
+                          const SizedBox(width: 8),
+                          Text(
+                            '購入済み',
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.onErrorContainer,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                background: const SizedBox.shrink(),
+                confirmDismiss: (_) async {
+                  await onTogglePurchased(item);
+                  return true;
+                },
+                child: _PurchaseItemTile(
+                  item: item,
+                  onTogglePurchased: () => onTogglePurchased(item),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ],
+        ),
+      ),
     );
+  }
+}
 
-    if (request == null) {
-      return;
-    }
+class _PurchaseItemTile extends StatelessWidget {
+  const _PurchaseItemTile({
+    required this.item,
+    required this.onTogglePurchased,
+  });
 
-    final selectedDate = ref.read(selectedWeekDateProvider);
-    await ref.read(weeklyShoppingRepositoryProvider).addItem(
-          referenceDate: selectedDate,
-          request: request,
-        );
-    ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
+  final ShoppingItemEntry item;
+  final VoidCallback onTogglePurchased;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(16),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        title: Text(item.name),
+        subtitle: Text('数量 ${item.quantity}'),
+        trailing: IconButton(
+          onPressed: onTogglePurchased,
+          icon: const Icon(Icons.check_circle_outline),
+          tooltip: '購入済みにする',
+        ),
+      ),
+    );
   }
 }

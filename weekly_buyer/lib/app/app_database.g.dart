@@ -1235,6 +1235,18 @@ class $WeeklyListItemsTable extends WeeklyListItems
       'REFERENCES weekly_lists (id) ON DELETE CASCADE',
     ),
   );
+  static const VerificationMeta _weekdayMeta = const VerificationMeta(
+    'weekday',
+  );
+  @override
+  late final GeneratedColumn<int> weekday = GeneratedColumn<int>(
+    'weekday',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   static const VerificationMeta _sectionNameMeta = const VerificationMeta(
     'sectionName',
   );
@@ -1363,6 +1375,7 @@ class $WeeklyListItemsTable extends WeeklyListItems
   List<GeneratedColumn> get $columns => [
     id,
     weeklyListId,
+    weekday,
     sectionName,
     itemMasterId,
     itemName,
@@ -1399,6 +1412,12 @@ class $WeeklyListItemsTable extends WeeklyListItems
       );
     } else if (isInserting) {
       context.missing(_weeklyListIdMeta);
+    }
+    if (data.containsKey('weekday')) {
+      context.handle(
+        _weekdayMeta,
+        weekday.isAcceptableOrUnknown(data['weekday']!, _weekdayMeta),
+      );
     }
     if (data.containsKey('section_name')) {
       context.handle(
@@ -1493,6 +1512,10 @@ class $WeeklyListItemsTable extends WeeklyListItems
         DriftSqlType.int,
         data['${effectivePrefix}weekly_list_id'],
       )!,
+      weekday: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}weekday'],
+      )!,
       sectionName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}section_name'],
@@ -1545,6 +1568,7 @@ class $WeeklyListItemsTable extends WeeklyListItems
 class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
   final int id;
   final int weeklyListId;
+  final int weekday;
   final String sectionName;
   final int? itemMasterId;
   final String itemName;
@@ -1558,6 +1582,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
   const WeeklyListItem({
     required this.id,
     required this.weeklyListId,
+    required this.weekday,
     required this.sectionName,
     this.itemMasterId,
     required this.itemName,
@@ -1574,6 +1599,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['weekly_list_id'] = Variable<int>(weeklyListId);
+    map['weekday'] = Variable<int>(weekday);
     map['section_name'] = Variable<String>(sectionName);
     if (!nullToAbsent || itemMasterId != null) {
       map['item_master_id'] = Variable<int>(itemMasterId);
@@ -1597,6 +1623,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
     return WeeklyListItemsCompanion(
       id: Value(id),
       weeklyListId: Value(weeklyListId),
+      weekday: Value(weekday),
       sectionName: Value(sectionName),
       itemMasterId: itemMasterId == null && nullToAbsent
           ? const Value.absent()
@@ -1624,6 +1651,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
     return WeeklyListItem(
       id: serializer.fromJson<int>(json['id']),
       weeklyListId: serializer.fromJson<int>(json['weeklyListId']),
+      weekday: serializer.fromJson<int>(json['weekday']),
       sectionName: serializer.fromJson<String>(json['sectionName']),
       itemMasterId: serializer.fromJson<int?>(json['itemMasterId']),
       itemName: serializer.fromJson<String>(json['itemName']),
@@ -1642,6 +1670,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'weeklyListId': serializer.toJson<int>(weeklyListId),
+      'weekday': serializer.toJson<int>(weekday),
       'sectionName': serializer.toJson<String>(sectionName),
       'itemMasterId': serializer.toJson<int?>(itemMasterId),
       'itemName': serializer.toJson<String>(itemName),
@@ -1658,6 +1687,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
   WeeklyListItem copyWith({
     int? id,
     int? weeklyListId,
+    int? weekday,
     String? sectionName,
     Value<int?> itemMasterId = const Value.absent(),
     String? itemName,
@@ -1671,6 +1701,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
   }) => WeeklyListItem(
     id: id ?? this.id,
     weeklyListId: weeklyListId ?? this.weeklyListId,
+    weekday: weekday ?? this.weekday,
     sectionName: sectionName ?? this.sectionName,
     itemMasterId: itemMasterId.present ? itemMasterId.value : this.itemMasterId,
     itemName: itemName ?? this.itemName,
@@ -1688,6 +1719,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
       weeklyListId: data.weeklyListId.present
           ? data.weeklyListId.value
           : this.weeklyListId,
+      weekday: data.weekday.present ? data.weekday.value : this.weekday,
       sectionName: data.sectionName.present
           ? data.sectionName.value
           : this.sectionName,
@@ -1716,6 +1748,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
     return (StringBuffer('WeeklyListItem(')
           ..write('id: $id, ')
           ..write('weeklyListId: $weeklyListId, ')
+          ..write('weekday: $weekday, ')
           ..write('sectionName: $sectionName, ')
           ..write('itemMasterId: $itemMasterId, ')
           ..write('itemName: $itemName, ')
@@ -1734,6 +1767,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
   int get hashCode => Object.hash(
     id,
     weeklyListId,
+    weekday,
     sectionName,
     itemMasterId,
     itemName,
@@ -1751,6 +1785,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
       (other is WeeklyListItem &&
           other.id == this.id &&
           other.weeklyListId == this.weeklyListId &&
+          other.weekday == this.weekday &&
           other.sectionName == this.sectionName &&
           other.itemMasterId == this.itemMasterId &&
           other.itemName == this.itemName &&
@@ -1766,6 +1801,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
 class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
   final Value<int> id;
   final Value<int> weeklyListId;
+  final Value<int> weekday;
   final Value<String> sectionName;
   final Value<int?> itemMasterId;
   final Value<String> itemName;
@@ -1779,6 +1815,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
   const WeeklyListItemsCompanion({
     this.id = const Value.absent(),
     this.weeklyListId = const Value.absent(),
+    this.weekday = const Value.absent(),
     this.sectionName = const Value.absent(),
     this.itemMasterId = const Value.absent(),
     this.itemName = const Value.absent(),
@@ -1793,6 +1830,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
   WeeklyListItemsCompanion.insert({
     this.id = const Value.absent(),
     required int weeklyListId,
+    this.weekday = const Value.absent(),
     required String sectionName,
     this.itemMasterId = const Value.absent(),
     required String itemName,
@@ -1809,6 +1847,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
   static Insertable<WeeklyListItem> custom({
     Expression<int>? id,
     Expression<int>? weeklyListId,
+    Expression<int>? weekday,
     Expression<String>? sectionName,
     Expression<int>? itemMasterId,
     Expression<String>? itemName,
@@ -1823,6 +1862,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (weeklyListId != null) 'weekly_list_id': weeklyListId,
+      if (weekday != null) 'weekday': weekday,
       if (sectionName != null) 'section_name': sectionName,
       if (itemMasterId != null) 'item_master_id': itemMasterId,
       if (itemName != null) 'item_name': itemName,
@@ -1839,6 +1879,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
   WeeklyListItemsCompanion copyWith({
     Value<int>? id,
     Value<int>? weeklyListId,
+    Value<int>? weekday,
     Value<String>? sectionName,
     Value<int?>? itemMasterId,
     Value<String>? itemName,
@@ -1853,6 +1894,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
     return WeeklyListItemsCompanion(
       id: id ?? this.id,
       weeklyListId: weeklyListId ?? this.weeklyListId,
+      weekday: weekday ?? this.weekday,
       sectionName: sectionName ?? this.sectionName,
       itemMasterId: itemMasterId ?? this.itemMasterId,
       itemName: itemName ?? this.itemName,
@@ -1874,6 +1916,9 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
     }
     if (weeklyListId.present) {
       map['weekly_list_id'] = Variable<int>(weeklyListId.value);
+    }
+    if (weekday.present) {
+      map['weekday'] = Variable<int>(weekday.value);
     }
     if (sectionName.present) {
       map['section_name'] = Variable<String>(sectionName.value);
@@ -1913,6 +1958,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
     return (StringBuffer('WeeklyListItemsCompanion(')
           ..write('id: $id, ')
           ..write('weeklyListId: $weeklyListId, ')
+          ..write('weekday: $weekday, ')
           ..write('sectionName: $sectionName, ')
           ..write('itemMasterId: $itemMasterId, ')
           ..write('itemName: $itemName, ')
@@ -3556,6 +3602,7 @@ typedef $$WeeklyListItemsTableCreateCompanionBuilder =
     WeeklyListItemsCompanion Function({
       Value<int> id,
       required int weeklyListId,
+      Value<int> weekday,
       required String sectionName,
       Value<int?> itemMasterId,
       required String itemName,
@@ -3571,6 +3618,7 @@ typedef $$WeeklyListItemsTableUpdateCompanionBuilder =
     WeeklyListItemsCompanion Function({
       Value<int> id,
       Value<int> weeklyListId,
+      Value<int> weekday,
       Value<String> sectionName,
       Value<int?> itemMasterId,
       Value<String> itemName,
@@ -3667,6 +3715,11 @@ class $$WeeklyListItemsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get weekday => $composableBuilder(
+    column: $table.weekday,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3794,6 +3847,11 @@ class $$WeeklyListItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get weekday => $composableBuilder(
+    column: $table.weekday,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get sectionName => $composableBuilder(
     column: $table.sectionName,
     builder: (column) => ColumnOrderings(column),
@@ -3915,6 +3973,9 @@ class $$WeeklyListItemsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get weekday =>
+      $composableBuilder(column: $table.weekday, builder: (column) => column);
 
   GeneratedColumn<String> get sectionName => $composableBuilder(
     column: $table.sectionName,
@@ -4052,6 +4113,7 @@ class $$WeeklyListItemsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<int> weeklyListId = const Value.absent(),
+                Value<int> weekday = const Value.absent(),
                 Value<String> sectionName = const Value.absent(),
                 Value<int?> itemMasterId = const Value.absent(),
                 Value<String> itemName = const Value.absent(),
@@ -4065,6 +4127,7 @@ class $$WeeklyListItemsTableTableManager
               }) => WeeklyListItemsCompanion(
                 id: id,
                 weeklyListId: weeklyListId,
+                weekday: weekday,
                 sectionName: sectionName,
                 itemMasterId: itemMasterId,
                 itemName: itemName,
@@ -4080,6 +4143,7 @@ class $$WeeklyListItemsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required int weeklyListId,
+                Value<int> weekday = const Value.absent(),
                 required String sectionName,
                 Value<int?> itemMasterId = const Value.absent(),
                 required String itemName,
@@ -4093,6 +4157,7 @@ class $$WeeklyListItemsTableTableManager
               }) => WeeklyListItemsCompanion.insert(
                 id: id,
                 weeklyListId: weeklyListId,
+                weekday: weekday,
                 sectionName: sectionName,
                 itemMasterId: itemMasterId,
                 itemName: itemName,

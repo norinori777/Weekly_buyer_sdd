@@ -1,38 +1,241 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/drift.dart' as drift;
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 import 'package:weekly_buyer/app/app_database.dart';
 import 'package:weekly_buyer/app/providers.dart';
 import 'package:weekly_buyer/app/weekly_buyer_app.dart';
+import 'package:weekly_buyer/features/weekly_shopping_list/data/weekly_shopping_repository.dart';
+import 'package:weekly_buyer/features/weekly_shopping_list/domain/weekly_shopping_models.dart';
+import 'package:weekly_buyer/features/weekly_shopping_list/presentation/week_header.dart';
+
+Future<void> _seedWeeklyItem(
+  AppDatabase database, {
+  required DateTime referenceDate,
+  required String categoryName,
+  required String itemName,
+}) async {
+  final existingCategories = await (database.select(
+    database.categories,
+  )..where((table) => table.name.equals(categoryName))).get();
+  if (existingCategories.isEmpty) {
+    await database
+        .into(database.categories)
+        .insert(
+          CategoriesCompanion.insert(
+            name: categoryName,
+            sortOrder: const drift.Value(0),
+          ),
+        );
+  }
+  final category = await (database.select(
+    database.categories,
+  )..where((table) => table.name.equals(categoryName))).getSingle();
+  await database
+      .into(database.itemMasters)
+      .insert(
+        ItemMastersCompanion.insert(
+          name: itemName,
+          categoryId: drift.Value(category.id),
+          defaultQuantity: const drift.Value(1),
+        ),
+      );
+
+  final repository = WeeklyShoppingRepository(database);
+  await repository.addItem(
+    referenceDate: referenceDate,
+    request: AddItemRequest(
+      name: itemName,
+      quantity: 1,
+      section: ShoppingSection.morning,
+      categoryId: category.id,
+    ),
+  );
+}
 
 void main() {
-  testWidgets('shows the main shell and switches destinations', (WidgetTester tester) async {
+  testWidgets('shows category-based purchase list without creation controls', (
+    WidgetTester tester,
+  ) async {
     final database = AppDatabase(executor: NativeDatabase.memory());
     addTearDown(database.close);
 
+    final today = dateOnly(DateTime.now());
+    await _seedWeeklyItem(
+      database,
+      referenceDate: today,
+      categoryName: '食品',
+      itemName: '牛乳',
+    );
+
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          appDatabaseProvider.overrideWithValue(database),
-        ],
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
         child: const WeeklyBuyerApp(),
       ),
     );
 
     await tester.pumpAndSettle();
 
-    expect(find.text('購入リスト'), findsWidgets);
-    expect(find.text('商品追加'), findsOneWidget);
+    expect(find.text('食品 1件'), findsOneWidget);
+    expect(find.text('牛乳'), findsOneWidget);
+    expect(find.text('追加'), findsNothing);
 
-    await tester.tap(find.text('商品追加').first);
+    await tester.drag(find.text('牛乳'), const Offset(-500, 0));
     await tester.pumpAndSettle();
 
-    expect(find.text('保存して購入リストへ戻る'), findsOneWidget);
-
-    await tester.tap(find.text('購入リスト').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('商品追加'), findsOneWidget);
+    expect(find.text('牛乳'), findsNothing);
   });
+
+  testWidgets('shows only items for the selected weekday', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final today = dateOnly(DateTime.now());
+    final mondayDate = startOfWeek(today);
+    final tuesdayDate = mondayDate.add(const Duration(days: 1));
+
+    await _seedWeeklyItem(
+      database,
+      referenceDate: mondayDate,
+      categoryName: '食品',
+      itemName: '牛乳',
+    );
+    await _seedWeeklyItem(
+      database,
+      referenceDate: tuesdayDate,
+      categoryName: '食品',
+      itemName: '卵',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(ChoiceChip).at(0));
+    await tester.pumpAndSettle();
+
+    expect(find.text('牛乳'), findsOneWidget);
+    expect(find.text('卵'), findsNothing);
+
+    await tester.fling(find.byType(WeekHeader), const Offset(-400, 0), 1000);
+    await tester.pumpAndSettle();
+
+    final selectedChip = tester.widget<ChoiceChip>(
+      find.byType(ChoiceChip).at(1),
+    );
+    expect(selectedChip.selected, isTrue);
+    expect(find.text('卵'), findsOneWidget);
+    expect(find.text('牛乳'), findsNothing);
+  });
+
+  testWidgets('saves a new item to the selected weekday only', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final today = dateOnly(DateTime.now());
+    final mondayDate = startOfWeek(today);
+
+    await _seedWeeklyItem(
+      database,
+      referenceDate: mondayDate,
+      categoryName: '食品',
+      itemName: '牛乳',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(ChoiceChip).at(0));
+    await tester.pumpAndSettle();
+
+    await tester.fling(find.byType(WeekHeader), const Offset(-400, 0), 1000);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品を追加'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(0), '豆腐');
+    await tester.enterText(find.byType(TextField).at(1), '2');
+    await tester.tap(find.text('登録する'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('豆腐'), findsOneWidget);
+    expect(find.text('牛乳'), findsNothing);
+
+    await tester.tap(find.byType(ChoiceChip).at(0));
+    await tester.pumpAndSettle();
+
+    expect(find.text('豆腐'), findsNothing);
+    expect(find.text('牛乳'), findsOneWidget);
+  });
+
+  testWidgets(
+    'switches destinations without losing the active week selection',
+    (WidgetTester tester) async {
+      final database = AppDatabase(executor: NativeDatabase.memory());
+      addTearDown(database.close);
+
+      final today = dateOnly(DateTime.now());
+      final mondayDate = startOfWeek(today);
+      final fridayDate = mondayDate.add(const Duration(days: 4));
+
+      await _seedWeeklyItem(
+        database,
+        referenceDate: mondayDate,
+        categoryName: '食品',
+        itemName: '食パン',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(database)],
+          child: const WeeklyBuyerApp(),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('商品追加'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(ChoiceChip).at(4));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('購入リスト').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('商品追加'));
+      await tester.pumpAndSettle();
+
+      final selectedChip = tester.widget<ChoiceChip>(
+        find.byType(ChoiceChip).at(4),
+      );
+      expect(selectedChip.selected, isTrue);
+      expect(fridayDate.weekday, DateTime.friday);
+    },
+  );
 }
