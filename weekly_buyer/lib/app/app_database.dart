@@ -73,6 +73,147 @@ class RecipeGroups extends Table {
   tables: [Categories, ItemMasters, WeeklyLists, WeeklyListItems, RecipeGroups],
 )
 class AppDatabase extends _$AppDatabase {
+  static const Map<String, List<String>> _initialCatalog = {
+    '野菜': [
+      'キャベツ',
+      'レタス',
+      'トマト',
+      'きゅうり',
+      'にんじん',
+      '玉ねぎ',
+      'じゃがいも',
+      'ほうれん草',
+      'ブロッコリー',
+      'ピーマン',
+      'なす',
+      '大根',
+      '白菜',
+      'かぼちゃ',
+      'アスパラガス',
+      'しいたけ',
+      'しめじ',
+      'えのき',
+      'まいたけ',
+      'エリンギ',
+      'パプリカ',
+      'ズッキーニ',
+    ],
+    '果物': [
+      'りんご',
+      'バナナ',
+      'みかん',
+      'いちご',
+      'ぶどう',
+      'キウイ',
+      'パイナップル',
+      '桃',
+      '梨',
+      'さくらんぼ',
+    ],
+    '肉': [
+      '牛肉',
+      '豚肉',
+      '鶏むね肉',
+      '鶏もも肉',
+      'ひき肉',
+      'ベーコン',
+      'ハム',
+      'ソーセージ',
+      'ラム肉',
+      '合いびき肉',
+      '鶏ひき',
+    ],
+    '魚介': [
+      '鮭',
+      'サバ',
+      'マグロ',
+      'イワシ',
+      'アジ',
+      'エビ',
+      'カニ',
+      'ホタテ',
+      'イカ',
+      'タコ',
+    ],
+    '乳製品': [
+      '牛乳',
+      'ヨーグルト',
+      'チーズ',
+      'バター',
+      '生クリーム',
+      'カッテージチーズ',
+      'アイスクリーム',
+      '飲むヨーグルト',
+    ],
+    '穀類・主食': [
+      '白米',
+      '玄米',
+      '食パン',
+      'うどん',
+      'そば',
+      'パスタ',
+      'シリアル',
+      'オートミール',
+    ],
+    '飲料': [
+      '水',
+      '緑茶',
+      'ウーロン茶',
+      'コーヒー',
+      '紅茶',
+      'オレンジジュース',
+      'コーラ',
+      'スポーツドリンク',
+    ],
+    'お菓子': [
+      'ポテトチップス',
+      'チョコレート',
+      'クッキー',
+      'ビスケット',
+      'キャンディ',
+      'ガム',
+      'せんべい',
+      'プリン',
+    ],
+    '冷凍食品': [
+      '冷凍餃子',
+      '冷凍チャーハン',
+      '冷凍うどん',
+      '冷凍ピザ',
+      '冷凍コロッケ',
+      '冷凍からあげ',
+      '冷凍野菜ミックス',
+    ],
+    '調味料': [
+      '醤油',
+      '味噌',
+      '砂糖',
+      '塩',
+      '酢',
+      'マヨネーズ',
+      'オイスターソース',
+      '油',
+      'ごま油',
+    ],
+    'ベーカリー': [
+      'クロワッサン',
+      'ロールパン',
+      'フランスパン',
+      'デニッシュ',
+      'あんパン',
+      'メロンパン',
+      'カレーパン',
+      '食パン（全粒粉）',
+      'ベーグル',
+      'マフィン',
+    ],
+    '大豆製品・発酵食品': [
+      '豆腐',
+      '納豆',
+      'キムチ',
+    ],
+  };
+
   AppDatabase({QueryExecutor? executor}) : super(executor ?? _openConnection());
 
   @override
@@ -93,11 +234,43 @@ class AppDatabase extends _$AppDatabase {
         );
       }
     },
+    beforeOpen: (details) async {
+      await _seedInitialCatalogIfNeeded();
+    },
   );
 
   Future<bool> _hasColumn(String tableName, String columnName) async {
     final rows = await customSelect('PRAGMA table_info($tableName)').get();
     return rows.any((row) => row.data['name'] == columnName);
+  }
+
+  Future<void> _seedInitialCatalogIfNeeded() async {
+    final hasCategories = await (select(categories)..limit(1)).getSingleOrNull();
+    if (hasCategories != null) {
+      return;
+    }
+
+    for (final entry in _initialCatalog.entries) {
+      final categoryIndex = _initialCatalog.keys.toList().indexOf(entry.key);
+      final category = await into(categories).insertReturning(
+        CategoriesCompanion.insert(
+          name: entry.key,
+          sortOrder: Value(categoryIndex),
+        ),
+      );
+
+      await batch((batch) {
+        for (final itemName in entry.value) {
+          batch.insert(
+            itemMasters,
+            ItemMastersCompanion.insert(
+              name: itemName,
+              categoryId: Value(category.id),
+            ),
+          );
+        }
+      });
+    }
   }
 
   static QueryExecutor _openConnection() {
