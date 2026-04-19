@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +7,7 @@ import 'package:weekly_buyer/app/providers.dart';
 import 'package:weekly_buyer/app/weekly_buyer_app.dart';
 
 void main() {
-  testWidgets('shows the weekly shopping shell', (WidgetTester tester) async {
+  testWidgets('shows the main shell and switches destinations', (WidgetTester tester) async {
     final database = AppDatabase(executor: NativeDatabase.memory());
     addTearDown(database.close);
 
@@ -23,9 +22,17 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Weekly Buyer'), findsOneWidget);
+    expect(find.text('購入リスト'), findsWidgets);
     expect(find.text('商品を追加'), findsOneWidget);
-    expect(find.byType(Card), findsNWidgets(3));
-    expect(find.byType(ChoiceChip), findsNWidgets(7));
+
+    await tester.tap(find.text('商品追加').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('保存して購入リストへ戻る'), findsOneWidget);
+
+    await tester.tap(find.text('購入リスト').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('商品を追加'), findsOneWidget);
   });
 }

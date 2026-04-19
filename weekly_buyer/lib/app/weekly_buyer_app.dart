@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../features/weekly_shopping_list/presentation/weekly_shopping_page.dart';
+import '../features/weekly_shopping_list/presentation/main_shell.dart';
 import 'providers.dart';
 
 class WeeklyBuyerApp extends ConsumerWidget {
@@ -37,7 +37,7 @@ class WeeklyBuyerApp extends ConsumerWidget {
           ),
         ),
       ),
-      home: const WeeklyShoppingPage(),
+      home: const MainShell(),
     );
   }
 }
