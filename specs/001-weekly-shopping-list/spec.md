@@ -5,6 +5,13 @@
 **Status**: Draft  
 **Input**: User description: "１週間分の買い物リストを登録"
 
+## Clarifications
+
+### Session 2026-04-19
+
+- Q: 週の開始日はどうしますか？ → A: 月曜始まりの日曜終わりで固定する
+- Q: 「その他」は何を意味しますか？ → A: 朝、昼、夜の区分けがない商品リストとして扱う
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Create a Weekly Shopping List (Priority: P1)
@@ -44,6 +51,7 @@
 - 同じ商品を複数回追加した場合は、数量の違いが分かるように表示する。
 - 商品名が既知の候補にない場合は、新規登録の流れへ進める。
 - 週をまたいで保存されたリストがある場合でも、今見ている週の内容が混ざらないようにする。
+- 朝、昼、夜の区分けがない商品は「その他」にまとめ、曜日や時間帯に属さない独立した商品リストとして扱う。
 
 ## Requirements *(mandatory)*
 
@@ -60,6 +68,7 @@
 - **FR-009**: System MUST allow users to restore the most recent purchased item through an undo action.
 - **FR-010**: System MUST keep shopping data available offline.
 - **FR-011**: System MUST allow users to manage category order for the shopping list.
+- **FR-012**: System MUST allow users to place items in a special "Other" list for items that are not tied to morning, afternoon, or evening sections.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -67,6 +76,7 @@
 - **Shopping Item**: A purchasable item in the weekly list, including name, quantity, category, and purchase state.
 - **Item Master**: A reusable catalog entry for known items so users can add common items quickly.
 - **Category**: A grouping used to organize items in a stable order during shopping.
+- **Other List**: A special day-independent item list used for items that are not assigned to morning, afternoon, or evening sections.
 
 ## Success Criteria *(mandatory)*
 
