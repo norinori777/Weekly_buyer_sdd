@@ -16,7 +16,10 @@ class WeekHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final weekDays = List.generate(7, (index) => weekRange.start.add(Duration(days: index)));
+    final weekDays = List.generate(
+      7,
+      (index) => weekRange.start.add(Duration(days: index)),
+    );
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -66,9 +69,15 @@ class WeekHeader extends StatelessWidget {
     );
   }
 
-  DateTime _shiftDay(List<DateTime> weekDays, DateTime selectedDate, int deltaDays) {
+  DateTime _shiftDay(
+    List<DateTime> weekDays,
+    DateTime selectedDate,
+    int deltaDays,
+  ) {
     final normalized = dateOnly(selectedDate);
-    final currentIndex = weekDays.indexWhere((day) => dateOnly(day) == normalized);
+    final currentIndex = weekDays.indexWhere(
+      (day) => dateOnly(day) == normalized,
+    );
     if (currentIndex == -1) {
       return normalized;
     }
@@ -79,6 +88,6 @@ class WeekHeader extends StatelessWidget {
 
   String _weekdayLabel(DateTime date) {
     const weekdays = ['月', '火', '水', '木', '金', '土', '日'];
-    return '${weekdays[date.weekday - 1]} ${date.month}/${date.day}';
+    return weekdays[date.weekday - 1];
   }
 }

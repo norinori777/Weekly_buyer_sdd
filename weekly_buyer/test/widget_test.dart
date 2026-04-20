@@ -237,6 +237,38 @@ void main() {
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
+  testWidgets('shows weekday-only labels in weekday selector', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    final chips = tester
+        .widgetList<ChoiceChip>(find.byType(ChoiceChip))
+        .toList();
+    expect(chips, hasLength(7));
+
+    final digitPattern = RegExp(r'\d');
+    for (final chip in chips) {
+      expect(chip.label, isA<Text>());
+      final labelText = (chip.label as Text).data ?? '';
+      expect(digitPattern.hasMatch(labelText), isFalse);
+      expect(labelText.length, 1);
+    }
+  });
+
   testWidgets(
     'switches destinations without losing the active week selection',
     (WidgetTester tester) async {
