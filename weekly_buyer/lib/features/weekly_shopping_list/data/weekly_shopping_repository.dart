@@ -8,12 +8,36 @@ class WeeklyShoppingRepository {
 
   final AppDatabase _database;
 
+  Future<List<CategoryEntry>> loadCategories() {
+    return _loadCategories();
+  }
+
+  Future<void> updateCategoryOrder(List<CategoryOrderUpdate> updates) async {
+    if (updates.isEmpty) {
+      return;
+    }
+
+    final now = DateTime.now();
+    await _database.transaction(() async {
+      for (final update in updates) {
+        await (_database.update(
+          _database.categories,
+        )..where((table) => table.id.equals(update.categoryId))).write(
+          CategoriesCompanion(
+            sortOrder: Value(update.sortOrder),
+            updatedAt: Value(now),
+          ),
+        );
+      }
+    });
+  }
+
   Future<WeeklyShoppingSnapshot> loadWeek(DateTime referenceDate) async {
     final weekStart = startOfWeek(referenceDate);
     final weekEnd = endOfWeek(referenceDate);
     final weeklyList = await _ensureWeeklyList(weekStart, weekEnd);
 
-    final categories = await _loadCategories();
+    final categories = await loadCategories();
     final categoryNames = {
       for (final category in categories) category.id: category.name,
     };
@@ -282,7 +306,7 @@ class WeeklyShoppingRepository {
               ..orderBy([(table) => OrderingTerm(expression: table.name)]))
             .get();
 
-    final categories = await _loadCategories();
+    final categories = await loadCategories();
     final categoryNames = {
       for (final category in categories) category.id: category.name,
     };

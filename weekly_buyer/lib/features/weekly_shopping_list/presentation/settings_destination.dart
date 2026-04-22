@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'category_order_destination.dart';
+
 class SettingsDestination extends StatelessWidget {
   const SettingsDestination({super.key});
 
@@ -22,7 +24,13 @@ class SettingsDestination extends StatelessWidget {
               leading: const Icon(Icons.sort),
               title: const Text('カテゴリの並び順'),
               subtitle: const Text('商品を見やすい順に並べ替えます。'),
-              onTap: () {},
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CategoryOrderDestination(),
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 12),

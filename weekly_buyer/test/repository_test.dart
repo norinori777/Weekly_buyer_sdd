@@ -7,6 +7,11 @@ import 'package:weekly_buyer/features/weekly_shopping_list/data/weekly_shopping_
 import 'package:weekly_buyer/features/weekly_shopping_list/domain/weekly_shopping_models.dart';
 
 void main() {
+  test('computes next calendar week from the current week start', () {
+    expect(startOfNextWeek(DateTime(2026, 4, 22)), DateTime(2026, 4, 27));
+    expect(startOfNextWeek(DateTime(2026, 12, 31)), DateTime(2027, 1, 4));
+  });
+
   test(
     'creates a Monday-start weekly list and separates items by weekday within the same week',
     () async {
@@ -250,4 +255,65 @@ void main() {
       expect(snapshot.categoryGroups.single.items, hasLength(1));
     },
   );
+
+  test('updates category order using the persisted sort order', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            name: 'テスト食品',
+            sortOrder: drift.Value(0),
+          ),
+        );
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            name: 'テスト日用品',
+            sortOrder: drift.Value(1),
+          ),
+        );
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            name: 'テスト飲料',
+            sortOrder: drift.Value(2),
+          ),
+        );
+
+    final categoriesBefore = await repository.loadCategories();
+    expect(
+      categoriesBefore
+            .where((category) => {'テスト食品', 'テスト日用品', 'テスト飲料'}.contains(category.name))
+          .map((category) => category.name)
+          .toList(),
+            ['テスト食品', 'テスト日用品', 'テスト飲料'],
+    );
+
+    final categoryIds = {
+      for (final category in categoriesBefore) category.name: category.id,
+    };
+
+    await repository.updateCategoryOrder([
+      CategoryOrderUpdate(categoryId: categoryIds['テスト日用品']!, sortOrder: 0),
+      CategoryOrderUpdate(categoryId: categoryIds['テスト飲料']!, sortOrder: 1),
+      CategoryOrderUpdate(categoryId: categoryIds['テスト食品']!, sortOrder: 2),
+    ]);
+
+    final categoriesAfter = await repository.loadCategories();
+    expect(
+      categoriesAfter
+            .where((category) => {'テスト食品', 'テスト日用品', 'テスト飲料'}.contains(category.name))
+          .map((category) => category.name)
+          .toList(),
+            ['テスト日用品', 'テスト飲料', 'テスト食品'],
+    );
+    expect(
+      categoriesAfter
+            .where((category) => {'テスト食品', 'テスト日用品', 'テスト飲料'}.contains(category.name))
+          .map((category) => category.sortOrder)
+          .toList(),
+      [0, 1, 2],
+    );
+  });
 }
