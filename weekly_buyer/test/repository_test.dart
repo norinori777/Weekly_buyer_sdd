@@ -316,4 +316,104 @@ void main() {
       [0, 1, 2],
     );
   });
+
+  test('adds, updates, and deletes categories without items', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+
+    final created = await repository.addCategory('テストカテゴリ');
+    expect(created.name, 'テストカテゴリ');
+
+    await repository.updateCategory(
+      categoryId: created.id,
+      name: '更新後カテゴリ',
+    );
+
+    final categoriesAfterUpdate = await repository.loadCategories();
+    expect(
+      categoriesAfterUpdate.firstWhere((category) => category.id == created.id).name,
+      '更新後カテゴリ',
+    );
+
+    await repository.deleteCategory(created.id);
+
+    final categoriesAfterDelete = await repository.loadCategories();
+    expect(categoriesAfterDelete.where((category) => category.id == created.id), isEmpty);
+  });
+
+  test('blocks category deletion when active items exist', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    final category = await repository.addCategory('削除対象カテゴリ');
+    await repository.addItemMaster(name: '削除対象商品', categoryId: category.id);
+
+    expect(
+      () => repository.deleteCategory(category.id),
+      throwsA(isA<CategoryNotEmptyException>()),
+    );
+  });
+
+  test('adds, updates, and deletes items outside the current purchase week', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    final category = await repository.addCategory('商品カテゴリ');
+    final created = await repository.addItemMaster(
+      name: 'テスト商品',
+      categoryId: category.id,
+    );
+
+    await repository.updateItemMaster(
+      itemId: created.id,
+      name: '更新商品',
+      categoryId: category.id,
+    );
+
+    final itemsAfterUpdate = await repository.loadItemMasters();
+    expect(itemsAfterUpdate.any((item) => item.name == '更新商品'), isTrue);
+
+    await repository.deleteItemMaster(
+      created.id,
+      referenceDate: DateTime(2026, 4, 27),
+    );
+
+    final itemsAfterDelete = await repository.loadItemMasters();
+    expect(itemsAfterDelete.where((item) => item.id == created.id), isEmpty);
+  });
+
+  test('blocks item deletion when the current purchase week already references it', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    final category = await repository.addCategory('商品カテゴリ');
+    await repository.addItemMaster(
+      name: 'テスト牛乳',
+      categoryId: category.id,
+    );
+
+    final referenceDate = DateTime(2026, 4, 27);
+    await repository.addItem(
+      referenceDate: referenceDate,
+      request: AddItemRequest(
+        name: 'テスト牛乳',
+        quantity: 1,
+        section: ShoppingSection.morning,
+        categoryId: category.id,
+      ),
+    );
+
+    final item = (await repository.loadItemMasters())
+        .firstWhere((candidate) => candidate.name == 'テスト牛乳');
+
+    expect(
+      () => repository.deleteItemMaster(item.id, referenceDate: referenceDate),
+      throwsA(isA<ItemInPurchaseWeekException>()),
+    );
+  });
 }
