@@ -49,7 +49,7 @@ final previousShoppingDestinationProvider = StateProvider<MainShellDestination>(
 });
 
 final selectedWeekDateProvider = StateProvider<DateTime>((ref) {
-	return dateOnly(DateTime.now());
+	return startOfNextWeek(DateTime.now());
 });
 
 final itemAddDraftProvider = StateProvider<ItemAddDraft>((ref) {

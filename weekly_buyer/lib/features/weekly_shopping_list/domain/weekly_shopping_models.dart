@@ -32,6 +32,16 @@ class CategoryEntry {
   final bool isActive;
 }
 
+class CategoryOrderUpdate {
+  const CategoryOrderUpdate({
+    required this.categoryId,
+    required this.sortOrder,
+  });
+
+  final int categoryId;
+  final int sortOrder;
+}
+
 class ShoppingCategoryGroup {
   const ShoppingCategoryGroup({
     required this.categoryId,
@@ -161,6 +171,10 @@ DateTime startOfWeek(DateTime value) {
 
 DateTime endOfWeek(DateTime value) {
   return startOfWeek(value).add(const Duration(days: 6));
+}
+
+DateTime startOfNextWeek(DateTime value) {
+  return startOfWeek(value).add(const Duration(days: 7));
 }
 
 String formatWeekLabel(WeekRange range) {

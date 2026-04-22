@@ -55,6 +55,10 @@ Future<void> _seedWeeklyItem(
   );
 }
 
+DateTime _nextWeekStart() {
+  return startOfNextWeek(dateOnly(DateTime.now()));
+}
+
 void main() {
   testWidgets('shows category-based purchase list without creation controls', (
     WidgetTester tester,
@@ -62,10 +66,9 @@ void main() {
     final database = AppDatabase(executor: NativeDatabase.memory());
     addTearDown(database.close);
 
-    final today = dateOnly(DateTime.now());
     await _seedWeeklyItem(
       database,
-      referenceDate: today,
+      referenceDate: _nextWeekStart(),
       categoryName: '食品',
       itemName: 'テスト牛乳',
     );
@@ -95,8 +98,7 @@ void main() {
     final database = AppDatabase(executor: NativeDatabase.memory());
     addTearDown(database.close);
 
-    final today = dateOnly(DateTime.now());
-    final mondayDate = startOfWeek(today);
+    final mondayDate = _nextWeekStart();
     final tuesdayDate = mondayDate.add(const Duration(days: 1));
 
     await _seedWeeklyItem(
@@ -147,8 +149,7 @@ void main() {
     final database = AppDatabase(executor: NativeDatabase.memory());
     addTearDown(database.close);
 
-    final today = dateOnly(DateTime.now());
-    final mondayDate = startOfWeek(today);
+    final mondayDate = _nextWeekStart();
 
     await _seedWeeklyItem(
       database,
@@ -199,8 +200,7 @@ void main() {
     final database = AppDatabase(executor: NativeDatabase.memory());
     addTearDown(database.close);
 
-    final today = dateOnly(DateTime.now());
-    final mondayDate = startOfWeek(today);
+    final mondayDate = _nextWeekStart();
 
     await _seedWeeklyItem(
       database,
@@ -269,14 +269,43 @@ void main() {
     }
   });
 
+  testWidgets('opens the item-add screen on next calendar week', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final today = dateOnly(DateTime.now());
+    final nextWeekStart = startOfNextWeek(today);
+    final expectedLabel = formatWeekLabel(
+      WeekRange(
+        start: nextWeekStart,
+        end: nextWeekStart.add(const Duration(days: 6)),
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(expectedLabel), findsOneWidget);
+  });
+
   testWidgets(
     'switches destinations without losing the active week selection',
     (WidgetTester tester) async {
       final database = AppDatabase(executor: NativeDatabase.memory());
       addTearDown(database.close);
 
-      final today = dateOnly(DateTime.now());
-      final mondayDate = startOfWeek(today);
+      final mondayDate = _nextWeekStart();
       final fridayDate = mondayDate.add(const Duration(days: 4));
 
       await _seedWeeklyItem(
