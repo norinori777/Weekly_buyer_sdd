@@ -68,3 +68,4 @@ weekly_buyer/
 ## Complexity Tracking
 
 不要。既存の `sort_order` を再利用するため、スキーマ変更や複雑な移行は発生しない。
+

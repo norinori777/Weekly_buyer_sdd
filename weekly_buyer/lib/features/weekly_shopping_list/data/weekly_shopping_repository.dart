@@ -12,6 +12,151 @@ class WeeklyShoppingRepository {
     return _loadCategories();
   }
 
+  Future<List<ItemCandidate>> loadItemMasters() {
+    return _loadItemMasters();
+  }
+
+  Future<CategoryEntry> addCategory(String name) async {
+    final normalizedName = name.trim();
+    if (normalizedName.isEmpty) {
+      throw ArgumentError.value(name, 'name', 'カテゴリ名は必須です');
+    }
+
+    return _database.transaction(() async {
+      final nextSortOrder = await _nextCategorySortOrder();
+      final inserted = await _database.into(_database.categories).insertReturning(
+            CategoriesCompanion.insert(
+              name: normalizedName,
+              sortOrder: Value(nextSortOrder),
+            ),
+          );
+      return CategoryEntry(
+        id: inserted.id,
+        name: inserted.name,
+        sortOrder: inserted.sortOrder,
+        isActive: inserted.isActive,
+      );
+    });
+  }
+
+  Future<void> updateCategory({
+    required int categoryId,
+    required String name,
+  }) async {
+    final normalizedName = name.trim();
+    if (normalizedName.isEmpty) {
+      throw ArgumentError.value(name, 'name', 'カテゴリ名は必須です');
+    }
+
+    await _database.transaction(() async {
+      await (_database.update(
+        _database.categories,
+      )..where((table) => table.id.equals(categoryId))).write(
+        CategoriesCompanion(
+          name: Value(normalizedName),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+    });
+  }
+
+  Future<void> deleteCategory(int categoryId) async {
+    await _database.transaction(() async {
+      final itemCount = await countItemsInCategory(categoryId);
+      if (itemCount > 0) {
+        throw CategoryNotEmptyException(categoryId, itemCount);
+      }
+
+      await (_database.update(
+        _database.categories,
+      )..where((table) => table.id.equals(categoryId))).write(
+        CategoriesCompanion(
+          isActive: const Value(false),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+    });
+  }
+
+  Future<ItemCandidate> addItemMaster({
+    required String name,
+    int? categoryId,
+  }) async {
+    final normalizedName = name.trim();
+    if (normalizedName.isEmpty) {
+      throw ArgumentError.value(name, 'name', '商品名は必須です');
+    }
+
+    return _database.transaction(() async {
+      final inserted = await _database.into(_database.itemMasters).insertReturning(
+            ItemMastersCompanion.insert(
+              name: normalizedName,
+              categoryId: Value(categoryId),
+              defaultQuantity: const Value(1),
+            ),
+          );
+      final categoryNames = await _categoryNamesById();
+      return ItemCandidate(
+        id: inserted.id,
+        name: inserted.name,
+        categoryId: inserted.categoryId,
+        categoryName: inserted.categoryId == null
+            ? null
+            : categoryNames[inserted.categoryId!],
+        defaultQuantity: inserted.defaultQuantity,
+      );
+    });
+  }
+
+  Future<void> updateItemMaster({
+    required int itemId,
+    required String name,
+    int? categoryId,
+  }) async {
+    final normalizedName = name.trim();
+    if (normalizedName.isEmpty) {
+      throw ArgumentError.value(name, 'name', '商品名は必須です');
+    }
+
+    await _database.transaction(() async {
+      await (_database.update(
+        _database.itemMasters,
+      )..where((table) => table.id.equals(itemId))).write(
+        ItemMastersCompanion(
+          name: Value(normalizedName),
+          categoryId: Value(categoryId),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+    });
+  }
+
+  Future<void> deleteItemMaster(
+    int itemId, {
+    DateTime? referenceDate,
+  }) async {
+    await _database.transaction(() async {
+      final weekStart = startOfWeek(referenceDate ?? DateTime.now());
+      final hasCurrentWeekEntries = await hasPurchaseEntries(
+        itemId,
+        referenceDate: weekStart,
+      );
+      if (hasCurrentWeekEntries) {
+        final referenceCount = await _countWeekReferences(itemId, weekStart);
+        throw ItemInPurchaseWeekException(itemId, weekStart, referenceCount);
+      }
+
+      await (_database.update(
+        _database.itemMasters,
+      )..where((table) => table.id.equals(itemId))).write(
+        ItemMastersCompanion(
+          isActive: const Value(false),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+    });
+  }
+
   Future<void> updateCategoryOrder(List<CategoryOrderUpdate> updates) async {
     if (updates.isEmpty) {
       return;
@@ -174,6 +319,50 @@ class WeeklyShoppingRepository {
     )..where((table) => table.id.equals(itemId))).go();
   }
 
+  Future<int> countItemsInCategory(int categoryId) async {
+    final rows = await (_database.select(_database.itemMasters)
+          ..where(
+            (table) => table.categoryId.equals(categoryId) & table.isActive.equals(true),
+          ))
+        .get();
+    return rows.length;
+  }
+
+  Future<Set<int>> loadCurrentWeekItemMasterIds(DateTime referenceDate) async {
+    final weekStart = startOfWeek(referenceDate);
+    final weeklyList = await (_database.select(
+      _database.weeklyLists,
+    )..where((table) => table.weekStart.equals(weekStart))).getSingleOrNull();
+    if (weeklyList == null) {
+      return <int>{};
+    }
+
+    final rows = await (_database.select(_database.weeklyListItems)
+          ..where((table) => table.weeklyListId.equals(weeklyList.id)))
+        .get();
+
+    return {
+      for (final row in rows)
+        if (row.itemMasterId != null) row.itemMasterId!,
+    };
+  }
+
+  Future<bool> hasPurchaseEntries(
+    int itemId, {
+    DateTime? referenceDate,
+  }) async {
+    final weekStart = startOfWeek(referenceDate ?? DateTime.now());
+    final weeklyList = await (_database.select(
+      _database.weeklyLists,
+    )..where((table) => table.weekStart.equals(weekStart))).getSingleOrNull();
+    if (weeklyList == null) {
+      return false;
+    }
+
+      final references = await _countWeekReferences(itemId, weekStart);
+    return references > 0;
+  }
+
   Future<void> togglePurchased(int itemId) async {
     final item = await (_database.select(
       _database.weeklyListItems,
@@ -281,10 +470,12 @@ class WeeklyShoppingRepository {
 
   Future<List<CategoryEntry>> _loadCategories() async {
     final rows =
-        await (_database.select(_database.categories)..orderBy([
-              (table) => OrderingTerm(expression: table.sortOrder),
-              (table) => OrderingTerm(expression: table.name),
-            ]))
+        await (_database.select(_database.categories)
+              ..where((table) => table.isActive.equals(true))
+              ..orderBy([
+                (table) => OrderingTerm(expression: table.sortOrder),
+                (table) => OrderingTerm(expression: table.name),
+              ]))
             .get();
 
     return rows
@@ -324,6 +515,43 @@ class WeeklyShoppingRepository {
           ),
         )
         .toList();
+  }
+
+  Future<int> _nextCategorySortOrder() async {
+    final latest = await (_database.select(_database.categories)
+          ..where((table) => table.isActive.equals(true))
+          ..orderBy([
+            (table) => OrderingTerm(
+              expression: table.sortOrder,
+              mode: OrderingMode.desc,
+            ),
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+    return (latest?.sortOrder ?? -1) + 1;
+  }
+
+  Future<Map<int, String>> _categoryNamesById() async {
+    final categories = await loadCategories();
+    return {for (final category in categories) category.id: category.name};
+  }
+
+  Future<int> _countWeekReferences(int itemId, DateTime weekStart) async {
+    final query = _database.selectOnly(_database.weeklyListItems)
+      ..addColumns([_database.weeklyListItems.id.count()])
+      ..join([
+        innerJoin(
+          _database.weeklyLists,
+          _database.weeklyLists.id.equalsExp(_database.weeklyListItems.weeklyListId),
+        ),
+      ])
+      ..where(
+        _database.weeklyListItems.itemMasterId.equals(itemId) &
+            _database.weeklyLists.weekStart.equals(weekStart),
+      );
+
+    final row = await query.getSingle();
+    return row.read(_database.weeklyListItems.id.count()) ?? 0;
   }
 
   List<ShoppingCategoryGroup> _groupEntriesByCategory(

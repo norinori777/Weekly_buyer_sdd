@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'category_item_settings_destination.dart';
 import 'category_order_destination.dart';
 
 class SettingsDestination extends StatelessWidget {
@@ -39,7 +40,13 @@ class SettingsDestination extends StatelessWidget {
               leading: const Icon(Icons.category_outlined),
               title: const Text('カテゴリと商品'),
               subtitle: const Text('カテゴリや商品マスタの管理へ進みます。'),
-              onTap: () {},
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CategoryItemSettingsDestination(),
+                  ),
+                );
+              },
             ),
           ),
         ],

@@ -42,6 +42,31 @@ class CategoryOrderUpdate {
   final int sortOrder;
 }
 
+class CategoryNotEmptyException implements Exception {
+  const CategoryNotEmptyException(this.categoryId, this.itemCount);
+
+  final int categoryId;
+  final int itemCount;
+
+  @override
+  String toString() {
+    return 'CategoryNotEmptyException(categoryId: $categoryId, itemCount: $itemCount)';
+  }
+}
+
+class ItemInPurchaseWeekException implements Exception {
+  const ItemInPurchaseWeekException(this.itemId, this.weekStart, this.referenceCount);
+
+  final int itemId;
+  final DateTime weekStart;
+  final int referenceCount;
+
+  @override
+  String toString() {
+    return 'ItemInPurchaseWeekException(itemId: $itemId, weekStart: $weekStart, referenceCount: $referenceCount)';
+  }
+}
+
 class ShoppingCategoryGroup {
   const ShoppingCategoryGroup({
     required this.categoryId,
