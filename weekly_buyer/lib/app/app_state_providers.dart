@@ -40,6 +40,30 @@ class ItemAddDraft {
 	}
 }
 
+class MealMenuDraftState {
+	const MealMenuDraftState({this.textBySection = const {}});
+
+	final Map<MealSection, String> textBySection;
+
+	String textFor(MealSection section) {
+		return textBySection[section] ?? '';
+	}
+
+	MealMenuDraftState copyWithText(MealSection section, String text) {
+		return MealMenuDraftState(
+			textBySection: {
+				...textBySection,
+				section: text,
+			},
+		);
+	}
+
+	MealMenuDraftState clearText(MealSection section) {
+		final next = Map<MealSection, String>.from(textBySection)..remove(section);
+		return MealMenuDraftState(textBySection: next);
+	}
+}
+
 final mainShellDestinationProvider = StateProvider<MainShellDestination>((ref) {
 	return MainShellDestination.purchaseList;
 });
@@ -56,6 +80,10 @@ final itemAddDraftProvider = StateProvider<ItemAddDraft>((ref) {
 	return const ItemAddDraft();
 });
 
+final mealMenuDraftProvider = StateProvider.family<MealMenuDraftState, DateTime>((ref, referenceDate) {
+	return const MealMenuDraftState();
+});
+
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
 	final database = AppDatabase();
 	ref.onDispose(database.close);
@@ -69,4 +97,8 @@ final weeklyShoppingRepositoryProvider = Provider<WeeklyShoppingRepository>((ref
 final weeklyShoppingSnapshotProvider =
 		FutureProvider.family<WeeklyShoppingSnapshot, DateTime>((ref, referenceDate) {
 	return ref.watch(weeklyShoppingRepositoryProvider).loadWeek(referenceDate);
+});
+
+final mealMenuSnapshotProvider = FutureProvider.family<MealMenuDaySnapshot, DateTime>((ref, referenceDate) {
+	return ref.watch(weeklyShoppingRepositoryProvider).loadMealMenuSnapshot(referenceDate);
 });

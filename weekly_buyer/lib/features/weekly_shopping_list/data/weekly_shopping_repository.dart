@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 
-import '../../../app/app_database.dart' hide DailyMemo;
+import '../../../app/app_database.dart' hide DailyMemo, MealMenuEntry;
 import '../domain/weekly_shopping_models.dart';
 
 class WeeklyShoppingRepository {
@@ -18,6 +18,28 @@ class WeeklyShoppingRepository {
 
   Future<DailyMemoEntry?> loadDailyMemo(DateTime referenceDate) async {
     return _loadDailyMemo(referenceDate);
+  }
+
+  Future<MealMenuDaySnapshot> loadMealMenuSnapshot(DateTime referenceDate) async {
+    final weekStart = startOfWeek(referenceDate);
+    final weekEnd = endOfWeek(referenceDate);
+    final dailyMealMenu = await _loadDailyMealMenu(referenceDate);
+    final entries = await _loadMealMenuEntries(dailyMealMenu?.id);
+    final groupedSections = MealSection.values
+        .map(
+          (section) => MealMenuSectionEntries(
+            section: section,
+            entries: entries.where((entry) => entry.section == section).toList(),
+          ),
+        )
+        .toList();
+
+    return MealMenuDaySnapshot(
+      weekRange: WeekRange(start: weekStart, end: weekEnd),
+      selectedDate: dateOnly(referenceDate),
+      sections: groupedSections,
+      suggestions: await loadMealMenuSuggestions(),
+    );
   }
 
   Future<void> saveDailyMemo({
@@ -66,6 +88,124 @@ class WeeklyShoppingRepository {
         ),
       );
     });
+  }
+
+  Future<void> saveMealMenuEntry({
+    required DateTime referenceDate,
+    required MealSection section,
+    required String menuText,
+  }) async {
+    final normalizedText = menuText.trim();
+    if (normalizedText.isEmpty) {
+      return;
+    }
+
+    final dailyMealMenu = await _ensureDailyMealMenu(referenceDate);
+    final nextSortOrder = await _nextMealMenuSortOrder(dailyMealMenu.id, section);
+
+    await _database.into(_database.mealMenuEntries).insert(
+          MealMenuEntriesCompanion.insert(
+            dailyMealMenuId: dailyMealMenu.id,
+            mealSection: section.name,
+            menuText: normalizedText,
+            sortOrder: Value(nextSortOrder),
+          ),
+        );
+  }
+
+  Future<void> deleteMealMenuEntry(int entryId) async {
+    await _database.transaction(() async {
+      final row = await (_database.select(_database.mealMenuEntries)
+            ..where((table) => table.id.equals(entryId)))
+          .getSingleOrNull();
+      if (row == null) {
+        return;
+      }
+
+      await (_database.delete(_database.mealMenuEntries)
+            ..where((table) => table.id.equals(entryId)))
+          .go();
+
+      final remainingCount = await (_database.selectOnly(_database.mealMenuEntries)
+            ..addColumns([_database.mealMenuEntries.id.count()])
+            ..where(_database.mealMenuEntries.dailyMealMenuId.equals(row.dailyMealMenuId)))
+          .getSingle();
+      final remaining = remainingCount.read(_database.mealMenuEntries.id.count()) ?? 0;
+      if (remaining == 0) {
+        await (_database.delete(_database.dailyMealMenus)
+              ..where((table) => table.id.equals(row.dailyMealMenuId)))
+            .go();
+      }
+    });
+  }
+
+  Future<List<MealMenuEntry>> loadMealMenuEntries(DateTime referenceDate) async {
+    final dailyMealMenu = await _loadDailyMealMenu(referenceDate);
+    return _loadMealMenuEntries(dailyMealMenu?.id);
+  }
+
+  Future<List<MealMenuSuggestion>> loadMealMenuSuggestions() async {
+    final rows = await (_database.select(_database.mealMenuEntries)
+          ..orderBy([
+            (table) => OrderingTerm(
+                  expression: table.updatedAt,
+                  mode: OrderingMode.desc,
+                ),
+            (table) => OrderingTerm(
+                  expression: table.createdAt,
+                  mode: OrderingMode.desc,
+                ),
+          ]))
+        .get();
+
+    final normalizedSuggestions = <String, _MealMenuSuggestionAccumulator>{};
+    for (final row in rows) {
+      final key = row.menuText.trim();
+      if (key.isEmpty) {
+        continue;
+      }
+
+      final current = normalizedSuggestions[key];
+      if (current == null) {
+        normalizedSuggestions[key] = _MealMenuSuggestionAccumulator(
+          text: key,
+          usageCount: 1,
+          lastUsedAt: row.updatedAt,
+        );
+      } else {
+        normalizedSuggestions[key] = current.copyWith(
+          usageCount: current.usageCount + 1,
+          lastUsedAt: row.updatedAt.isAfter(current.lastUsedAt)
+              ? row.updatedAt
+              : current.lastUsedAt,
+        );
+      }
+    }
+
+    final suggestions = normalizedSuggestions.values.toList()
+      ..sort((left, right) {
+        final countComparison = right.usageCount.compareTo(left.usageCount);
+        if (countComparison != 0) {
+          return countComparison;
+        }
+
+        final lastUsedComparison = right.lastUsedAt.compareTo(left.lastUsedAt);
+        if (lastUsedComparison != 0) {
+          return lastUsedComparison;
+        }
+
+        return left.text.compareTo(right.text);
+      });
+
+    return suggestions
+        .map(
+          (suggestion) => MealMenuSuggestion(
+            text: suggestion.text,
+            usageCount: suggestion.usageCount,
+            lastUsedAt: suggestion.lastUsedAt,
+          ),
+        )
+        .toList();
   }
 
   Future<CategoryEntry> addCategory(String name) async {
@@ -590,6 +730,96 @@ class WeeklyShoppingRepository {
     return {for (final category in categories) category.id: category.name};
   }
 
+  Future<DailyMealMenusData?> _loadDailyMealMenu(DateTime referenceDate) async {
+    final weekStart = startOfWeek(referenceDate);
+    final weekday = dateOnly(referenceDate).weekday;
+    return (_database.select(_database.dailyMealMenus)
+          ..where(
+            (table) =>
+                table.weekStartDate.equals(weekStart) & table.weekday.equals(weekday),
+          ))
+        .getSingleOrNull();
+  }
+
+  Future<DailyMealMenusData> _ensureDailyMealMenu(DateTime referenceDate) async {
+    final existing = await _loadDailyMealMenu(referenceDate);
+    if (existing != null) {
+      return existing;
+    }
+
+    final weekStart = startOfWeek(referenceDate);
+    final weekday = dateOnly(referenceDate).weekday;
+    return _database.into(_database.dailyMealMenus).insertReturning(
+          DailyMealMenusCompanion.insert(
+            weekStartDate: weekStart,
+            weekday: weekday,
+          ),
+        );
+  }
+
+  Future<List<MealMenuEntry>> _loadMealMenuEntries(int? dailyMealMenuId) async {
+    if (dailyMealMenuId == null) {
+      return const [];
+    }
+
+    final dailyMealMenu = await _loadDailyMealMenuById(dailyMealMenuId);
+    if (dailyMealMenu == null) {
+      return const [];
+    }
+
+    final rows = await (_database.select(_database.mealMenuEntries)
+          ..where((table) => table.dailyMealMenuId.equals(dailyMealMenuId))
+          ..orderBy([
+            (table) => OrderingTerm(expression: table.sortOrder),
+            (table) => OrderingTerm(expression: table.createdAt),
+          ]))
+        .get();
+
+    return rows
+        .map(
+          (row) => MealMenuEntry(
+            id: row.id,
+            weekStartDate: dailyMealMenu.weekStartDate,
+            weekday: dailyMealMenu.weekday,
+            section: _mealSectionFromStoredValue(row.mealSection),
+            menuText: row.menuText,
+            sortOrder: row.sortOrder,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+          ),
+        )
+        .toList();
+  }
+
+  Future<DailyMealMenusData?> _loadDailyMealMenuById(int dailyMealMenuId) async {
+    return (_database.select(_database.dailyMealMenus)
+          ..where((table) => table.id.equals(dailyMealMenuId)))
+        .getSingleOrNull();
+  }
+
+  MealSection _mealSectionFromStoredValue(String value) {
+    return MealSection.values.firstWhere((section) => section.name == value);
+  }
+
+  Future<int> _nextMealMenuSortOrder(int dailyMealMenuId, MealSection section) async {
+    final latest = await (_database.select(_database.mealMenuEntries)
+          ..where(
+            (table) =>
+                table.dailyMealMenuId.equals(dailyMealMenuId) &
+                table.mealSection.equals(section.name),
+          )
+          ..orderBy([
+            (table) => OrderingTerm(
+                  expression: table.sortOrder,
+                  mode: OrderingMode.desc,
+                ),
+          ])
+          ..limit(1))
+        .getSingleOrNull();
+
+    return (latest?.sortOrder ?? -1) + 1;
+  }
+
   Future<DailyMemoEntry?> _loadDailyMemo(DateTime referenceDate) async {
     final weekStart = startOfWeek(referenceDate);
     final weekday = dateOnly(referenceDate).weekday;
@@ -708,6 +938,30 @@ class WeeklyShoppingRepository {
     return ShoppingSection.values.firstWhere(
       (section) => section.name == value,
       orElse: () => ShoppingSection.other,
+    );
+  }
+}
+
+class _MealMenuSuggestionAccumulator {
+  const _MealMenuSuggestionAccumulator({
+    required this.text,
+    required this.usageCount,
+    required this.lastUsedAt,
+  });
+
+  final String text;
+  final int usageCount;
+  final DateTime lastUsedAt;
+
+  _MealMenuSuggestionAccumulator copyWith({
+    String? text,
+    int? usageCount,
+    DateTime? lastUsedAt,
+  }) {
+    return _MealMenuSuggestionAccumulator(
+      text: text ?? this.text,
+      usageCount: usageCount ?? this.usageCount,
+      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
     );
   }
 }

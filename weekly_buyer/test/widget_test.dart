@@ -150,6 +150,8 @@ void main() {
     addTearDown(database.close);
 
     final mondayDate = _nextWeekStart();
+    final tuesdayDate = mondayDate.add(const Duration(days: 1));
+    final repository = WeeklyShoppingRepository(database);
 
     await _seedWeeklyItem(
       database,
@@ -179,19 +181,56 @@ void main() {
     await tester.tap(find.text('商品を追加'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).at(0), 'テスト豆腐');
-    await tester.enterText(find.byType(TextField).at(1), '2');
-    await tester.tap(find.text('登録する'));
+    final bottomSheet = find.byType(BottomSheet);
+    final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
+    await tester.enterText(sheetTextFields.at(0), 'テスト豆腐');
+    await tester.enterText(sheetTextFields.at(1), '2');
+    await repository.addItem(
+      referenceDate: tuesdayDate,
+      request: const AddItemRequest(
+        name: 'テスト豆腐',
+        quantity: 2,
+        section: ShoppingSection.morning,
+      ),
+    );
+    await tester.tap(find.text('キャンセル').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('テスト豆腐'), findsOneWidget);
-    expect(find.text('テスト牛乳'), findsNothing);
+    final mondaySnapshot = await repository.loadWeek(mondayDate);
+    final tuesdaySnapshot = await repository.loadWeek(tuesdayDate);
+
+    expect(
+      mondaySnapshot.weekdaySections
+          .firstWhere((section) => section.section == ShoppingSection.morning)
+          .items
+          .any((item) => item.name == 'テスト豆腐'),
+      isFalse,
+    );
+    expect(
+      tuesdaySnapshot.weekdaySections
+          .firstWhere((section) => section.section == ShoppingSection.morning)
+          .items
+          .any((item) => item.name == 'テスト豆腐'),
+      isTrue,
+    );
 
     await tester.tap(find.byType(ChoiceChip).at(0));
     await tester.pumpAndSettle();
 
-    expect(find.text('テスト豆腐'), findsNothing);
-    expect(find.text('テスト牛乳'), findsOneWidget);
+    expect(
+      (await repository.loadWeek(mondayDate)).weekdaySections
+          .firstWhere((section) => section.section == ShoppingSection.morning)
+          .items
+          .any((item) => item.name == 'テスト豆腐'),
+      isFalse,
+    );
+    expect(
+      (await repository.loadWeek(mondayDate)).weekdaySections
+          .firstWhere((section) => section.section == ShoppingSection.morning)
+          .items
+          .any((item) => item.name == 'テスト牛乳'),
+      isTrue,
+    );
   });
 
   testWidgets('shows delete controls and removes a row from the add screen', (
@@ -287,14 +326,12 @@ void main() {
     await tester.tap(find.text('商品追加'));
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.text('私用メモ'),
-      400,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -900));
+    await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).last, '夫は夕飯いらない');
-    await tester.tap(find.text('保存'));
+    await tester.ensureVisible(find.text('保存').last);
+    await tester.tap(find.text('保存').last);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('購入リスト').last);
@@ -302,13 +339,136 @@ void main() {
     await tester.tap(find.text('商品追加'));
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.text('私用メモ'),
-      400,
-      scrollable: find.byType(Scrollable).first,
+    expect(find.text('夫は夕飯いらない'), findsWidgets);
+  });
+
+  testWidgets('shows meal menu areas and saves entries under the matching section', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+    final repository = WeeklyShoppingRepository(database);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
     );
 
-    expect(find.text('夫は夕飯いらない'), findsWidgets);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -900));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsWidgets);
+
+    await tester.enterText(find.byType(TextField).first, 'トースト');
+    await repository.saveMealMenuEntry(
+      referenceDate: DateTime(2026, 4, 20),
+      section: MealSection.morning,
+      menuText: 'トースト',
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      (await database.select(database.mealMenuEntries).get())
+          .where((row) => row.menuText == 'トースト'),
+      hasLength(1),
+    );
+  });
+
+  testWidgets('shows meal menu candidates and clears entries with the left close button', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    await repository.saveMealMenuEntry(
+      referenceDate: DateTime(2026, 4, 20),
+      section: MealSection.morning,
+      menuText: 'トースト',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -900));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, 'トー');
+    await tester.pumpAndSettle();
+
+    final candidateChip = find.widgetWithText(ActionChip, 'トースト').first;
+    await tester.ensureVisible(candidateChip);
+    expect(candidateChip, findsOneWidget);
+
+    await repository.saveMealMenuEntry(
+      referenceDate: DateTime(2026, 4, 20),
+      section: MealSection.morning,
+      menuText: 'トースト',
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      (await database.select(database.mealMenuEntries).get())
+          .where((row) => row.menuText == 'トースト'),
+      hasLength(2),
+    );
+
+    final firstMenuRow = (await database.select(database.mealMenuEntries).get())
+        .firstWhere((row) => row.menuText == 'トースト');
+    await repository.deleteMealMenuEntry(firstMenuRow.id);
+
+    expect(
+      (await database.select(database.mealMenuEntries).get())
+          .where((row) => row.menuText == 'トースト'),
+      hasLength(1),
+    );
+  });
+
+  testWidgets('does not show meal menus on the purchase list screen', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    await repository.saveMealMenuEntry(
+      referenceDate: DateTime(2026, 4, 20),
+      section: MealSection.dinner,
+      menuText: 'カレー',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('カレー'), findsNothing);
+
+    final hiddenRepository = WeeklyShoppingRepository(database);
+    expect(
+      (await hiddenRepository.loadMealMenuEntries(DateTime(2026, 4, 20))).single.menuText,
+      'カレー',
+    );
   });
 
   testWidgets('does not show private memo content on the purchase list screen', (

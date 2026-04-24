@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
 import '../domain/weekly_shopping_models.dart';
@@ -146,6 +147,188 @@ class _DailyMemoEditorState extends State<DailyMemoEditor> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class MealMenuSectionEditor extends ConsumerStatefulWidget {
+  const MealMenuSectionEditor({
+    super.key,
+    required this.selectedDate,
+    required this.section,
+    required this.entries,
+    required this.suggestions,
+    required this.onSave,
+    required this.onDelete,
+  });
+
+  final DateTime selectedDate;
+  final MealSection section;
+  final List<MealMenuEntry> entries;
+  final List<MealMenuSuggestion> suggestions;
+  final Future<void> Function(String menuText) onSave;
+  final Future<void> Function(int entryId) onDelete;
+
+  @override
+  ConsumerState<MealMenuSectionEditor> createState() => _MealMenuSectionEditorState();
+}
+
+class _MealMenuSectionEditorState extends ConsumerState<MealMenuSectionEditor> {
+  late final TextEditingController _menuController;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _menuController = TextEditingController(
+      text: ref.read(mealMenuDraftProvider(widget.selectedDate)).textFor(widget.section),
+    );
+  }
+
+  @override
+  void dispose() {
+    _menuController.dispose();
+    super.dispose();
+  }
+
+  void _updateDraft(String text) {
+    ref.read(mealMenuDraftProvider(widget.selectedDate).notifier).state =
+        ref.read(mealMenuDraftProvider(widget.selectedDate)).copyWithText(widget.section, text);
+  }
+
+  Future<void> _saveMenu(String menuText) async {
+    if (_isSaving) {
+      return;
+    }
+
+    final normalized = menuText.trim();
+    if (normalized.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+    try {
+      await widget.onSave(normalized);
+      if (!mounted) {
+        return;
+      }
+      _menuController.clear();
+      _updateDraft('');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  List<MealMenuSuggestion> _filteredSuggestions() {
+    final query = _menuController.text.trim().toLowerCase();
+    final suggestions = widget.suggestions.where((suggestion) {
+      if (query.isEmpty) {
+        return true;
+      }
+      return suggestion.text.toLowerCase().contains(query);
+    }).toList();
+
+    return suggestions.take(6).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final suggestions = _filteredSuggestions();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('${widget.section.label}の料理メニュー', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _menuController,
+          decoration: const InputDecoration(
+            labelText: 'メニューを追加',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (value) {
+            _updateDraft(value);
+            setState(() {});
+          },
+          onSubmitted: _saveMenu,
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _isSaving
+                    ? null
+                    : () {
+                        _menuController.clear();
+                        _updateDraft('');
+                        setState(() {});
+                      },
+                child: const Text('クリア'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton(
+                onPressed: _isSaving ? null : () => _saveMenu(_menuController.text),
+                child: Text(_isSaving ? '保存中...' : '保存'),
+              ),
+            ),
+          ],
+        ),
+        if (suggestions.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text('候補', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final suggestion in suggestions)
+                ActionChip(
+                  label: Text(suggestion.text),
+                  onPressed: _isSaving
+                      ? null
+                      : () async {
+                          _menuController.text = suggestion.text;
+                          _menuController.selection = TextSelection.fromPosition(
+                            TextPosition(offset: suggestion.text.length),
+                          );
+                          _updateDraft(suggestion.text);
+                          await _saveMenu(suggestion.text);
+                        },
+                ),
+            ],
+          ),
+        ],
+        if (widget.entries.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text('登録済み', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          for (final entry in widget.entries) ...[
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: IconButton(
+                onPressed: _isSaving ? null : () => widget.onDelete(entry.id),
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                tooltip: '削除',
+                visualDensity: VisualDensity.compact,
+              ),
+              title: Text(entry.menuText),
+            ),
+            if (entry != widget.entries.last) const Divider(height: 1),
+          ],
+        ],
+      ],
     );
   }
 }
