@@ -1974,6 +1974,408 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
   }
 }
 
+class $DailyMemosTable extends DailyMemos
+    with TableInfo<$DailyMemosTable, DailyMemo> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DailyMemosTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _weekStartDateMeta = const VerificationMeta(
+    'weekStartDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> weekStartDate =
+      GeneratedColumn<DateTime>(
+        'week_start_date',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _weekdayMeta = const VerificationMeta(
+    'weekday',
+  );
+  @override
+  late final GeneratedColumn<int> weekday = GeneratedColumn<int>(
+    'weekday',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _memoTextMeta = const VerificationMeta(
+    'memoText',
+  );
+  @override
+  late final GeneratedColumn<String> memoText = GeneratedColumn<String>(
+    'memo_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    weekStartDate,
+    weekday,
+    memoText,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'daily_memos';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DailyMemo> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('week_start_date')) {
+      context.handle(
+        _weekStartDateMeta,
+        weekStartDate.isAcceptableOrUnknown(
+          data['week_start_date']!,
+          _weekStartDateMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_weekStartDateMeta);
+    }
+    if (data.containsKey('weekday')) {
+      context.handle(
+        _weekdayMeta,
+        weekday.isAcceptableOrUnknown(data['weekday']!, _weekdayMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_weekdayMeta);
+    }
+    if (data.containsKey('memo_text')) {
+      context.handle(
+        _memoTextMeta,
+        memoText.isAcceptableOrUnknown(data['memo_text']!, _memoTextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_memoTextMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DailyMemo map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DailyMemo(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      weekStartDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}week_start_date'],
+      )!,
+      weekday: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}weekday'],
+      )!,
+      memoText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}memo_text'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $DailyMemosTable createAlias(String alias) {
+    return $DailyMemosTable(attachedDatabase, alias);
+  }
+}
+
+class DailyMemo extends DataClass implements Insertable<DailyMemo> {
+  final int id;
+  final DateTime weekStartDate;
+  final int weekday;
+  final String memoText;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const DailyMemo({
+    required this.id,
+    required this.weekStartDate,
+    required this.weekday,
+    required this.memoText,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['week_start_date'] = Variable<DateTime>(weekStartDate);
+    map['weekday'] = Variable<int>(weekday);
+    map['memo_text'] = Variable<String>(memoText);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  DailyMemosCompanion toCompanion(bool nullToAbsent) {
+    return DailyMemosCompanion(
+      id: Value(id),
+      weekStartDate: Value(weekStartDate),
+      weekday: Value(weekday),
+      memoText: Value(memoText),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory DailyMemo.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DailyMemo(
+      id: serializer.fromJson<int>(json['id']),
+      weekStartDate: serializer.fromJson<DateTime>(json['weekStartDate']),
+      weekday: serializer.fromJson<int>(json['weekday']),
+      memoText: serializer.fromJson<String>(json['memoText']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'weekStartDate': serializer.toJson<DateTime>(weekStartDate),
+      'weekday': serializer.toJson<int>(weekday),
+      'memoText': serializer.toJson<String>(memoText),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  DailyMemo copyWith({
+    int? id,
+    DateTime? weekStartDate,
+    int? weekday,
+    String? memoText,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => DailyMemo(
+    id: id ?? this.id,
+    weekStartDate: weekStartDate ?? this.weekStartDate,
+    weekday: weekday ?? this.weekday,
+    memoText: memoText ?? this.memoText,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  DailyMemo copyWithCompanion(DailyMemosCompanion data) {
+    return DailyMemo(
+      id: data.id.present ? data.id.value : this.id,
+      weekStartDate: data.weekStartDate.present
+          ? data.weekStartDate.value
+          : this.weekStartDate,
+      weekday: data.weekday.present ? data.weekday.value : this.weekday,
+      memoText: data.memoText.present ? data.memoText.value : this.memoText,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DailyMemo(')
+          ..write('id: $id, ')
+          ..write('weekStartDate: $weekStartDate, ')
+          ..write('weekday: $weekday, ')
+          ..write('memoText: $memoText, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, weekStartDate, weekday, memoText, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DailyMemo &&
+          other.id == this.id &&
+          other.weekStartDate == this.weekStartDate &&
+          other.weekday == this.weekday &&
+          other.memoText == this.memoText &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class DailyMemosCompanion extends UpdateCompanion<DailyMemo> {
+  final Value<int> id;
+  final Value<DateTime> weekStartDate;
+  final Value<int> weekday;
+  final Value<String> memoText;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const DailyMemosCompanion({
+    this.id = const Value.absent(),
+    this.weekStartDate = const Value.absent(),
+    this.weekday = const Value.absent(),
+    this.memoText = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  DailyMemosCompanion.insert({
+    this.id = const Value.absent(),
+    required DateTime weekStartDate,
+    required int weekday,
+    required String memoText,
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : weekStartDate = Value(weekStartDate),
+       weekday = Value(weekday),
+       memoText = Value(memoText);
+  static Insertable<DailyMemo> custom({
+    Expression<int>? id,
+    Expression<DateTime>? weekStartDate,
+    Expression<int>? weekday,
+    Expression<String>? memoText,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (weekStartDate != null) 'week_start_date': weekStartDate,
+      if (weekday != null) 'weekday': weekday,
+      if (memoText != null) 'memo_text': memoText,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  DailyMemosCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? weekStartDate,
+    Value<int>? weekday,
+    Value<String>? memoText,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return DailyMemosCompanion(
+      id: id ?? this.id,
+      weekStartDate: weekStartDate ?? this.weekStartDate,
+      weekday: weekday ?? this.weekday,
+      memoText: memoText ?? this.memoText,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (weekStartDate.present) {
+      map['week_start_date'] = Variable<DateTime>(weekStartDate.value);
+    }
+    if (weekday.present) {
+      map['weekday'] = Variable<int>(weekday.value);
+    }
+    if (memoText.present) {
+      map['memo_text'] = Variable<String>(memoText.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DailyMemosCompanion(')
+          ..write('id: $id, ')
+          ..write('weekStartDate: $weekStartDate, ')
+          ..write('weekday: $weekday, ')
+          ..write('memoText: $memoText, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $RecipeGroupsTable extends RecipeGroups
     with TableInfo<$RecipeGroupsTable, RecipeGroup> {
   @override
@@ -2376,6 +2778,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $WeeklyListItemsTable weeklyListItems = $WeeklyListItemsTable(
     this,
   );
+  late final $DailyMemosTable dailyMemos = $DailyMemosTable(this);
   late final $RecipeGroupsTable recipeGroups = $RecipeGroupsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -2386,6 +2789,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     itemMasters,
     weeklyLists,
     weeklyListItems,
+    dailyMemos,
     recipeGroups,
   ];
   @override
@@ -4277,6 +4681,218 @@ typedef $$WeeklyListItemsTableProcessedTableManager =
         bool categoryId,
       })
     >;
+typedef $$DailyMemosTableCreateCompanionBuilder =
+    DailyMemosCompanion Function({
+      Value<int> id,
+      required DateTime weekStartDate,
+      required int weekday,
+      required String memoText,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+typedef $$DailyMemosTableUpdateCompanionBuilder =
+    DailyMemosCompanion Function({
+      Value<int> id,
+      Value<DateTime> weekStartDate,
+      Value<int> weekday,
+      Value<String> memoText,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+class $$DailyMemosTableFilterComposer
+    extends Composer<_$AppDatabase, $DailyMemosTable> {
+  $$DailyMemosTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get weekStartDate => $composableBuilder(
+    column: $table.weekStartDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get weekday => $composableBuilder(
+    column: $table.weekday,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get memoText => $composableBuilder(
+    column: $table.memoText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DailyMemosTableOrderingComposer
+    extends Composer<_$AppDatabase, $DailyMemosTable> {
+  $$DailyMemosTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get weekStartDate => $composableBuilder(
+    column: $table.weekStartDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get weekday => $composableBuilder(
+    column: $table.weekday,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get memoText => $composableBuilder(
+    column: $table.memoText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DailyMemosTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DailyMemosTable> {
+  $$DailyMemosTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get weekStartDate => $composableBuilder(
+    column: $table.weekStartDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get weekday =>
+      $composableBuilder(column: $table.weekday, builder: (column) => column);
+
+  GeneratedColumn<String> get memoText =>
+      $composableBuilder(column: $table.memoText, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$DailyMemosTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DailyMemosTable,
+          DailyMemo,
+          $$DailyMemosTableFilterComposer,
+          $$DailyMemosTableOrderingComposer,
+          $$DailyMemosTableAnnotationComposer,
+          $$DailyMemosTableCreateCompanionBuilder,
+          $$DailyMemosTableUpdateCompanionBuilder,
+          (
+            DailyMemo,
+            BaseReferences<_$AppDatabase, $DailyMemosTable, DailyMemo>,
+          ),
+          DailyMemo,
+          PrefetchHooks Function()
+        > {
+  $$DailyMemosTableTableManager(_$AppDatabase db, $DailyMemosTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DailyMemosTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DailyMemosTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DailyMemosTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> weekStartDate = const Value.absent(),
+                Value<int> weekday = const Value.absent(),
+                Value<String> memoText = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => DailyMemosCompanion(
+                id: id,
+                weekStartDate: weekStartDate,
+                weekday: weekday,
+                memoText: memoText,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required DateTime weekStartDate,
+                required int weekday,
+                required String memoText,
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => DailyMemosCompanion.insert(
+                id: id,
+                weekStartDate: weekStartDate,
+                weekday: weekday,
+                memoText: memoText,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DailyMemosTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DailyMemosTable,
+      DailyMemo,
+      $$DailyMemosTableFilterComposer,
+      $$DailyMemosTableOrderingComposer,
+      $$DailyMemosTableAnnotationComposer,
+      $$DailyMemosTableCreateCompanionBuilder,
+      $$DailyMemosTableUpdateCompanionBuilder,
+      (DailyMemo, BaseReferences<_$AppDatabase, $DailyMemosTable, DailyMemo>),
+      DailyMemo,
+      PrefetchHooks Function()
+    >;
 typedef $$RecipeGroupsTableCreateCompanionBuilder =
     RecipeGroupsCompanion Function({
       Value<int> id,
@@ -4502,6 +5118,8 @@ class $AppDatabaseManager {
       $$WeeklyListsTableTableManager(_db, _db.weeklyLists);
   $$WeeklyListItemsTableTableManager get weeklyListItems =>
       $$WeeklyListItemsTableTableManager(_db, _db.weeklyListItems);
+  $$DailyMemosTableTableManager get dailyMemos =>
+      $$DailyMemosTableTableManager(_db, _db.dailyMemos);
   $$RecipeGroupsTableTableManager get recipeGroups =>
       $$RecipeGroupsTableTableManager(_db, _db.recipeGroups);
 }

@@ -60,6 +60,15 @@ class WeeklyListItems extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+class DailyMemos extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  DateTimeColumn get weekStartDate => dateTime()();
+  IntColumn get weekday => integer()();
+  TextColumn get memoText => text()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 class RecipeGroups extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
@@ -70,7 +79,7 @@ class RecipeGroups extends Table {
 }
 
 @DriftDatabase(
-  tables: [Categories, ItemMasters, WeeklyLists, WeeklyListItems, RecipeGroups],
+  tables: [Categories, ItemMasters, WeeklyLists, WeeklyListItems, DailyMemos, RecipeGroups],
 )
 class AppDatabase extends _$AppDatabase {
   static const Map<String, List<String>> _initialCatalog = {
@@ -217,7 +226,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? executor}) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -232,6 +241,9 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           "UPDATE weekly_list_items SET weekday = COALESCE(((CAST(strftime('%w', created_at) AS INTEGER) + 6) % 7) + 1, 1)",
         );
+      }
+      if (from < 3) {
+        await migrator.createTable(dailyMemos);
       }
     },
     beforeOpen: (details) async {

@@ -269,6 +269,67 @@ void main() {
     }
   });
 
+  testWidgets('saves and restores the private memo for the selected day', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('私用メモ'),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    await tester.enterText(find.byType(TextField).last, '夫は夕飯いらない');
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('購入リスト').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('私用メモ'),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(find.text('夫は夕飯いらない'), findsWidgets);
+  });
+
+  testWidgets('does not show private memo content on the purchase list screen', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('私用メモ'), findsNothing);
+    expect(find.text('夫は夕飯いらない'), findsNothing);
+  });
+
   testWidgets('opens the item-add screen on next calendar week', (
     WidgetTester tester,
   ) async {

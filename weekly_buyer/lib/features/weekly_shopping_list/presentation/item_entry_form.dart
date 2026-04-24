@@ -31,6 +31,125 @@ class ItemEntryForm extends StatefulWidget {
   State<ItemEntryForm> createState() => _ItemEntryFormState();
 }
 
+class DailyMemoEditor extends StatefulWidget {
+  const DailyMemoEditor({
+    super.key,
+    required this.selectedDate,
+    required this.initialText,
+    required this.onSave,
+  });
+
+  final DateTime selectedDate;
+  final String initialText;
+  final Future<void> Function(String memoText) onSave;
+
+  @override
+  State<DailyMemoEditor> createState() => _DailyMemoEditorState();
+}
+
+class _DailyMemoEditorState extends State<DailyMemoEditor> {
+  late final TextEditingController _memoController;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _memoController = TextEditingController(text: widget.initialText);
+  }
+
+  @override
+  void dispose() {
+    _memoController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSave(String memoText) async {
+    if (_isSaving) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+    try {
+      await widget.onSave(memoText);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dateLabel = '${widget.selectedDate.month}/${widget.selectedDate.day}';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text('私用メモ', style: Theme.of(context).textTheme.titleMedium),
+                ),
+                Text(dateLabel, style: Theme.of(context).textTheme.labelLarge),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '休みや夕飯不要など、その日の私用情報を残せます。',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _memoController,
+              minLines: 3,
+              maxLines: 6,
+              decoration: const InputDecoration(
+                labelText: 'メモ',
+                alignLabelWithHint: true,
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _isSaving
+                        ? null
+                        : () async {
+                            _memoController.clear();
+                            await _handleSave('');
+                          },
+                    child: const Text('クリア'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _isSaving
+                        ? null
+                        : () async {
+                            await _handleSave(_memoController.text);
+                          },
+                    child: Text(_isSaving ? '保存中...' : '保存'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ItemEntryFormState extends State<ItemEntryForm> {
   late final TextEditingController _nameController;
   late final TextEditingController _quantityController;

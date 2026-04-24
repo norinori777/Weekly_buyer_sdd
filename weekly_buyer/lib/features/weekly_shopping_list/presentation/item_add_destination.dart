@@ -61,6 +61,18 @@ class ItemAddDestination extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
               ],
+              DailyMemoEditor(
+                key: ValueKey('daily-memo-$selectedDate'),
+                selectedDate: selectedDate,
+                initialText: data.dailyMemo?.memoText ?? '',
+                onSave: (memoText) async {
+                  await ref.read(weeklyShoppingRepositoryProvider).saveDailyMemo(
+                        referenceDate: selectedDate,
+                        memoText: memoText,
+                      );
+                  ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
+                },
+              ),
             ],
           );
         },
