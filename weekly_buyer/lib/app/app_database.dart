@@ -69,6 +69,28 @@ class DailyMemos extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+class DailyMealMenus extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  DateTimeColumn get weekStartDate => dateTime()();
+  IntColumn get weekday => integer()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class MealMenuEntries extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get dailyMealMenuId => integer().references(
+    DailyMealMenus,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+  TextColumn get mealSection => text()();
+  TextColumn get menuText => text()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 class RecipeGroups extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
@@ -79,7 +101,16 @@ class RecipeGroups extends Table {
 }
 
 @DriftDatabase(
-  tables: [Categories, ItemMasters, WeeklyLists, WeeklyListItems, DailyMemos, RecipeGroups],
+  tables: [
+    Categories,
+    ItemMasters,
+    WeeklyLists,
+    WeeklyListItems,
+    DailyMemos,
+    DailyMealMenus,
+    MealMenuEntries,
+    RecipeGroups,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   static const Map<String, List<String>> _initialCatalog = {
@@ -226,7 +257,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? executor}) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -244,6 +275,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await migrator.createTable(dailyMemos);
+      }
+      if (from < 4) {
+        await migrator.createTable(dailyMealMenus);
+        await migrator.createTable(mealMenuEntries);
       }
     },
     beforeOpen: (details) async {

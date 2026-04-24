@@ -2376,6 +2376,823 @@ class DailyMemosCompanion extends UpdateCompanion<DailyMemo> {
   }
 }
 
+class $DailyMealMenusTable extends DailyMealMenus
+    with TableInfo<$DailyMealMenusTable, DailyMealMenusData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DailyMealMenusTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _weekStartDateMeta = const VerificationMeta(
+    'weekStartDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> weekStartDate =
+      GeneratedColumn<DateTime>(
+        'week_start_date',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _weekdayMeta = const VerificationMeta(
+    'weekday',
+  );
+  @override
+  late final GeneratedColumn<int> weekday = GeneratedColumn<int>(
+    'weekday',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    weekStartDate,
+    weekday,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'daily_meal_menus';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DailyMealMenusData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('week_start_date')) {
+      context.handle(
+        _weekStartDateMeta,
+        weekStartDate.isAcceptableOrUnknown(
+          data['week_start_date']!,
+          _weekStartDateMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_weekStartDateMeta);
+    }
+    if (data.containsKey('weekday')) {
+      context.handle(
+        _weekdayMeta,
+        weekday.isAcceptableOrUnknown(data['weekday']!, _weekdayMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_weekdayMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DailyMealMenusData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DailyMealMenusData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      weekStartDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}week_start_date'],
+      )!,
+      weekday: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}weekday'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $DailyMealMenusTable createAlias(String alias) {
+    return $DailyMealMenusTable(attachedDatabase, alias);
+  }
+}
+
+class DailyMealMenusData extends DataClass
+    implements Insertable<DailyMealMenusData> {
+  final int id;
+  final DateTime weekStartDate;
+  final int weekday;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const DailyMealMenusData({
+    required this.id,
+    required this.weekStartDate,
+    required this.weekday,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['week_start_date'] = Variable<DateTime>(weekStartDate);
+    map['weekday'] = Variable<int>(weekday);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  DailyMealMenusCompanion toCompanion(bool nullToAbsent) {
+    return DailyMealMenusCompanion(
+      id: Value(id),
+      weekStartDate: Value(weekStartDate),
+      weekday: Value(weekday),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory DailyMealMenusData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DailyMealMenusData(
+      id: serializer.fromJson<int>(json['id']),
+      weekStartDate: serializer.fromJson<DateTime>(json['weekStartDate']),
+      weekday: serializer.fromJson<int>(json['weekday']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'weekStartDate': serializer.toJson<DateTime>(weekStartDate),
+      'weekday': serializer.toJson<int>(weekday),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  DailyMealMenusData copyWith({
+    int? id,
+    DateTime? weekStartDate,
+    int? weekday,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => DailyMealMenusData(
+    id: id ?? this.id,
+    weekStartDate: weekStartDate ?? this.weekStartDate,
+    weekday: weekday ?? this.weekday,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  DailyMealMenusData copyWithCompanion(DailyMealMenusCompanion data) {
+    return DailyMealMenusData(
+      id: data.id.present ? data.id.value : this.id,
+      weekStartDate: data.weekStartDate.present
+          ? data.weekStartDate.value
+          : this.weekStartDate,
+      weekday: data.weekday.present ? data.weekday.value : this.weekday,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DailyMealMenusData(')
+          ..write('id: $id, ')
+          ..write('weekStartDate: $weekStartDate, ')
+          ..write('weekday: $weekday, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, weekStartDate, weekday, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DailyMealMenusData &&
+          other.id == this.id &&
+          other.weekStartDate == this.weekStartDate &&
+          other.weekday == this.weekday &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class DailyMealMenusCompanion extends UpdateCompanion<DailyMealMenusData> {
+  final Value<int> id;
+  final Value<DateTime> weekStartDate;
+  final Value<int> weekday;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const DailyMealMenusCompanion({
+    this.id = const Value.absent(),
+    this.weekStartDate = const Value.absent(),
+    this.weekday = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  DailyMealMenusCompanion.insert({
+    this.id = const Value.absent(),
+    required DateTime weekStartDate,
+    required int weekday,
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : weekStartDate = Value(weekStartDate),
+       weekday = Value(weekday);
+  static Insertable<DailyMealMenusData> custom({
+    Expression<int>? id,
+    Expression<DateTime>? weekStartDate,
+    Expression<int>? weekday,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (weekStartDate != null) 'week_start_date': weekStartDate,
+      if (weekday != null) 'weekday': weekday,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  DailyMealMenusCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? weekStartDate,
+    Value<int>? weekday,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return DailyMealMenusCompanion(
+      id: id ?? this.id,
+      weekStartDate: weekStartDate ?? this.weekStartDate,
+      weekday: weekday ?? this.weekday,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (weekStartDate.present) {
+      map['week_start_date'] = Variable<DateTime>(weekStartDate.value);
+    }
+    if (weekday.present) {
+      map['weekday'] = Variable<int>(weekday.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DailyMealMenusCompanion(')
+          ..write('id: $id, ')
+          ..write('weekStartDate: $weekStartDate, ')
+          ..write('weekday: $weekday, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MealMenuEntriesTable extends MealMenuEntries
+    with TableInfo<$MealMenuEntriesTable, MealMenuEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MealMenuEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _dailyMealMenuIdMeta = const VerificationMeta(
+    'dailyMealMenuId',
+  );
+  @override
+  late final GeneratedColumn<int> dailyMealMenuId = GeneratedColumn<int>(
+    'daily_meal_menu_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES daily_meal_menus (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _mealSectionMeta = const VerificationMeta(
+    'mealSection',
+  );
+  @override
+  late final GeneratedColumn<String> mealSection = GeneratedColumn<String>(
+    'meal_section',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _menuTextMeta = const VerificationMeta(
+    'menuText',
+  );
+  @override
+  late final GeneratedColumn<String> menuText = GeneratedColumn<String>(
+    'menu_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    dailyMealMenuId,
+    mealSection,
+    menuText,
+    sortOrder,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'meal_menu_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MealMenuEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('daily_meal_menu_id')) {
+      context.handle(
+        _dailyMealMenuIdMeta,
+        dailyMealMenuId.isAcceptableOrUnknown(
+          data['daily_meal_menu_id']!,
+          _dailyMealMenuIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_dailyMealMenuIdMeta);
+    }
+    if (data.containsKey('meal_section')) {
+      context.handle(
+        _mealSectionMeta,
+        mealSection.isAcceptableOrUnknown(
+          data['meal_section']!,
+          _mealSectionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_mealSectionMeta);
+    }
+    if (data.containsKey('menu_text')) {
+      context.handle(
+        _menuTextMeta,
+        menuText.isAcceptableOrUnknown(data['menu_text']!, _menuTextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_menuTextMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MealMenuEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MealMenuEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      dailyMealMenuId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}daily_meal_menu_id'],
+      )!,
+      mealSection: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}meal_section'],
+      )!,
+      menuText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}menu_text'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $MealMenuEntriesTable createAlias(String alias) {
+    return $MealMenuEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class MealMenuEntry extends DataClass implements Insertable<MealMenuEntry> {
+  final int id;
+  final int dailyMealMenuId;
+  final String mealSection;
+  final String menuText;
+  final int sortOrder;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const MealMenuEntry({
+    required this.id,
+    required this.dailyMealMenuId,
+    required this.mealSection,
+    required this.menuText,
+    required this.sortOrder,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['daily_meal_menu_id'] = Variable<int>(dailyMealMenuId);
+    map['meal_section'] = Variable<String>(mealSection);
+    map['menu_text'] = Variable<String>(menuText);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  MealMenuEntriesCompanion toCompanion(bool nullToAbsent) {
+    return MealMenuEntriesCompanion(
+      id: Value(id),
+      dailyMealMenuId: Value(dailyMealMenuId),
+      mealSection: Value(mealSection),
+      menuText: Value(menuText),
+      sortOrder: Value(sortOrder),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory MealMenuEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MealMenuEntry(
+      id: serializer.fromJson<int>(json['id']),
+      dailyMealMenuId: serializer.fromJson<int>(json['dailyMealMenuId']),
+      mealSection: serializer.fromJson<String>(json['mealSection']),
+      menuText: serializer.fromJson<String>(json['menuText']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'dailyMealMenuId': serializer.toJson<int>(dailyMealMenuId),
+      'mealSection': serializer.toJson<String>(mealSection),
+      'menuText': serializer.toJson<String>(menuText),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  MealMenuEntry copyWith({
+    int? id,
+    int? dailyMealMenuId,
+    String? mealSection,
+    String? menuText,
+    int? sortOrder,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => MealMenuEntry(
+    id: id ?? this.id,
+    dailyMealMenuId: dailyMealMenuId ?? this.dailyMealMenuId,
+    mealSection: mealSection ?? this.mealSection,
+    menuText: menuText ?? this.menuText,
+    sortOrder: sortOrder ?? this.sortOrder,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  MealMenuEntry copyWithCompanion(MealMenuEntriesCompanion data) {
+    return MealMenuEntry(
+      id: data.id.present ? data.id.value : this.id,
+      dailyMealMenuId: data.dailyMealMenuId.present
+          ? data.dailyMealMenuId.value
+          : this.dailyMealMenuId,
+      mealSection: data.mealSection.present
+          ? data.mealSection.value
+          : this.mealSection,
+      menuText: data.menuText.present ? data.menuText.value : this.menuText,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MealMenuEntry(')
+          ..write('id: $id, ')
+          ..write('dailyMealMenuId: $dailyMealMenuId, ')
+          ..write('mealSection: $mealSection, ')
+          ..write('menuText: $menuText, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    dailyMealMenuId,
+    mealSection,
+    menuText,
+    sortOrder,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MealMenuEntry &&
+          other.id == this.id &&
+          other.dailyMealMenuId == this.dailyMealMenuId &&
+          other.mealSection == this.mealSection &&
+          other.menuText == this.menuText &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class MealMenuEntriesCompanion extends UpdateCompanion<MealMenuEntry> {
+  final Value<int> id;
+  final Value<int> dailyMealMenuId;
+  final Value<String> mealSection;
+  final Value<String> menuText;
+  final Value<int> sortOrder;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const MealMenuEntriesCompanion({
+    this.id = const Value.absent(),
+    this.dailyMealMenuId = const Value.absent(),
+    this.mealSection = const Value.absent(),
+    this.menuText = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  MealMenuEntriesCompanion.insert({
+    this.id = const Value.absent(),
+    required int dailyMealMenuId,
+    required String mealSection,
+    required String menuText,
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : dailyMealMenuId = Value(dailyMealMenuId),
+       mealSection = Value(mealSection),
+       menuText = Value(menuText);
+  static Insertable<MealMenuEntry> custom({
+    Expression<int>? id,
+    Expression<int>? dailyMealMenuId,
+    Expression<String>? mealSection,
+    Expression<String>? menuText,
+    Expression<int>? sortOrder,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (dailyMealMenuId != null) 'daily_meal_menu_id': dailyMealMenuId,
+      if (mealSection != null) 'meal_section': mealSection,
+      if (menuText != null) 'menu_text': menuText,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  MealMenuEntriesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? dailyMealMenuId,
+    Value<String>? mealSection,
+    Value<String>? menuText,
+    Value<int>? sortOrder,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return MealMenuEntriesCompanion(
+      id: id ?? this.id,
+      dailyMealMenuId: dailyMealMenuId ?? this.dailyMealMenuId,
+      mealSection: mealSection ?? this.mealSection,
+      menuText: menuText ?? this.menuText,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (dailyMealMenuId.present) {
+      map['daily_meal_menu_id'] = Variable<int>(dailyMealMenuId.value);
+    }
+    if (mealSection.present) {
+      map['meal_section'] = Variable<String>(mealSection.value);
+    }
+    if (menuText.present) {
+      map['menu_text'] = Variable<String>(menuText.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MealMenuEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('dailyMealMenuId: $dailyMealMenuId, ')
+          ..write('mealSection: $mealSection, ')
+          ..write('menuText: $menuText, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $RecipeGroupsTable extends RecipeGroups
     with TableInfo<$RecipeGroupsTable, RecipeGroup> {
   @override
@@ -2779,6 +3596,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $DailyMemosTable dailyMemos = $DailyMemosTable(this);
+  late final $DailyMealMenusTable dailyMealMenus = $DailyMealMenusTable(this);
+  late final $MealMenuEntriesTable mealMenuEntries = $MealMenuEntriesTable(
+    this,
+  );
   late final $RecipeGroupsTable recipeGroups = $RecipeGroupsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -2790,6 +3611,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     weeklyLists,
     weeklyListItems,
     dailyMemos,
+    dailyMealMenus,
+    mealMenuEntries,
     recipeGroups,
   ];
   @override
@@ -2821,6 +3644,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('weekly_list_items', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'daily_meal_menus',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('meal_menu_entries', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -4893,6 +5723,688 @@ typedef $$DailyMemosTableProcessedTableManager =
       DailyMemo,
       PrefetchHooks Function()
     >;
+typedef $$DailyMealMenusTableCreateCompanionBuilder =
+    DailyMealMenusCompanion Function({
+      Value<int> id,
+      required DateTime weekStartDate,
+      required int weekday,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+typedef $$DailyMealMenusTableUpdateCompanionBuilder =
+    DailyMealMenusCompanion Function({
+      Value<int> id,
+      Value<DateTime> weekStartDate,
+      Value<int> weekday,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$DailyMealMenusTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $DailyMealMenusTable,
+          DailyMealMenusData
+        > {
+  $$DailyMealMenusTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<$MealMenuEntriesTable, List<MealMenuEntry>>
+  _mealMenuEntriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.mealMenuEntries,
+    aliasName: $_aliasNameGenerator(
+      db.dailyMealMenus.id,
+      db.mealMenuEntries.dailyMealMenuId,
+    ),
+  );
+
+  $$MealMenuEntriesTableProcessedTableManager get mealMenuEntriesRefs {
+    final manager = $$MealMenuEntriesTableTableManager(
+      $_db,
+      $_db.mealMenuEntries,
+    ).filter((f) => f.dailyMealMenuId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _mealMenuEntriesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$DailyMealMenusTableFilterComposer
+    extends Composer<_$AppDatabase, $DailyMealMenusTable> {
+  $$DailyMealMenusTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get weekStartDate => $composableBuilder(
+    column: $table.weekStartDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get weekday => $composableBuilder(
+    column: $table.weekday,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> mealMenuEntriesRefs(
+    Expression<bool> Function($$MealMenuEntriesTableFilterComposer f) f,
+  ) {
+    final $$MealMenuEntriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.mealMenuEntries,
+      getReferencedColumn: (t) => t.dailyMealMenuId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MealMenuEntriesTableFilterComposer(
+            $db: $db,
+            $table: $db.mealMenuEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$DailyMealMenusTableOrderingComposer
+    extends Composer<_$AppDatabase, $DailyMealMenusTable> {
+  $$DailyMealMenusTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get weekStartDate => $composableBuilder(
+    column: $table.weekStartDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get weekday => $composableBuilder(
+    column: $table.weekday,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DailyMealMenusTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DailyMealMenusTable> {
+  $$DailyMealMenusTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get weekStartDate => $composableBuilder(
+    column: $table.weekStartDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get weekday =>
+      $composableBuilder(column: $table.weekday, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  Expression<T> mealMenuEntriesRefs<T extends Object>(
+    Expression<T> Function($$MealMenuEntriesTableAnnotationComposer a) f,
+  ) {
+    final $$MealMenuEntriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.mealMenuEntries,
+      getReferencedColumn: (t) => t.dailyMealMenuId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MealMenuEntriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.mealMenuEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$DailyMealMenusTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DailyMealMenusTable,
+          DailyMealMenusData,
+          $$DailyMealMenusTableFilterComposer,
+          $$DailyMealMenusTableOrderingComposer,
+          $$DailyMealMenusTableAnnotationComposer,
+          $$DailyMealMenusTableCreateCompanionBuilder,
+          $$DailyMealMenusTableUpdateCompanionBuilder,
+          (DailyMealMenusData, $$DailyMealMenusTableReferences),
+          DailyMealMenusData,
+          PrefetchHooks Function({bool mealMenuEntriesRefs})
+        > {
+  $$DailyMealMenusTableTableManager(
+    _$AppDatabase db,
+    $DailyMealMenusTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DailyMealMenusTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DailyMealMenusTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DailyMealMenusTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> weekStartDate = const Value.absent(),
+                Value<int> weekday = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => DailyMealMenusCompanion(
+                id: id,
+                weekStartDate: weekStartDate,
+                weekday: weekday,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required DateTime weekStartDate,
+                required int weekday,
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => DailyMealMenusCompanion.insert(
+                id: id,
+                weekStartDate: weekStartDate,
+                weekday: weekday,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$DailyMealMenusTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({mealMenuEntriesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (mealMenuEntriesRefs) db.mealMenuEntries,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (mealMenuEntriesRefs)
+                    await $_getPrefetchedData<
+                      DailyMealMenusData,
+                      $DailyMealMenusTable,
+                      MealMenuEntry
+                    >(
+                      currentTable: table,
+                      referencedTable: $$DailyMealMenusTableReferences
+                          ._mealMenuEntriesRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$DailyMealMenusTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).mealMenuEntriesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where(
+                            (e) => e.dailyMealMenuId == item.id,
+                          ),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$DailyMealMenusTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DailyMealMenusTable,
+      DailyMealMenusData,
+      $$DailyMealMenusTableFilterComposer,
+      $$DailyMealMenusTableOrderingComposer,
+      $$DailyMealMenusTableAnnotationComposer,
+      $$DailyMealMenusTableCreateCompanionBuilder,
+      $$DailyMealMenusTableUpdateCompanionBuilder,
+      (DailyMealMenusData, $$DailyMealMenusTableReferences),
+      DailyMealMenusData,
+      PrefetchHooks Function({bool mealMenuEntriesRefs})
+    >;
+typedef $$MealMenuEntriesTableCreateCompanionBuilder =
+    MealMenuEntriesCompanion Function({
+      Value<int> id,
+      required int dailyMealMenuId,
+      required String mealSection,
+      required String menuText,
+      Value<int> sortOrder,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+typedef $$MealMenuEntriesTableUpdateCompanionBuilder =
+    MealMenuEntriesCompanion Function({
+      Value<int> id,
+      Value<int> dailyMealMenuId,
+      Value<String> mealSection,
+      Value<String> menuText,
+      Value<int> sortOrder,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$MealMenuEntriesTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $MealMenuEntriesTable, MealMenuEntry> {
+  $$MealMenuEntriesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $DailyMealMenusTable _dailyMealMenuIdTable(_$AppDatabase db) =>
+      db.dailyMealMenus.createAlias(
+        $_aliasNameGenerator(
+          db.mealMenuEntries.dailyMealMenuId,
+          db.dailyMealMenus.id,
+        ),
+      );
+
+  $$DailyMealMenusTableProcessedTableManager get dailyMealMenuId {
+    final $_column = $_itemColumn<int>('daily_meal_menu_id')!;
+
+    final manager = $$DailyMealMenusTableTableManager(
+      $_db,
+      $_db.dailyMealMenus,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_dailyMealMenuIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$MealMenuEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $MealMenuEntriesTable> {
+  $$MealMenuEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mealSection => $composableBuilder(
+    column: $table.mealSection,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get menuText => $composableBuilder(
+    column: $table.menuText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$DailyMealMenusTableFilterComposer get dailyMealMenuId {
+    final $$DailyMealMenusTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.dailyMealMenuId,
+      referencedTable: $db.dailyMealMenus,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DailyMealMenusTableFilterComposer(
+            $db: $db,
+            $table: $db.dailyMealMenus,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MealMenuEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $MealMenuEntriesTable> {
+  $$MealMenuEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mealSection => $composableBuilder(
+    column: $table.mealSection,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get menuText => $composableBuilder(
+    column: $table.menuText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$DailyMealMenusTableOrderingComposer get dailyMealMenuId {
+    final $$DailyMealMenusTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.dailyMealMenuId,
+      referencedTable: $db.dailyMealMenus,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DailyMealMenusTableOrderingComposer(
+            $db: $db,
+            $table: $db.dailyMealMenus,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MealMenuEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MealMenuEntriesTable> {
+  $$MealMenuEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get mealSection => $composableBuilder(
+    column: $table.mealSection,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get menuText =>
+      $composableBuilder(column: $table.menuText, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$DailyMealMenusTableAnnotationComposer get dailyMealMenuId {
+    final $$DailyMealMenusTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.dailyMealMenuId,
+      referencedTable: $db.dailyMealMenus,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DailyMealMenusTableAnnotationComposer(
+            $db: $db,
+            $table: $db.dailyMealMenus,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MealMenuEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MealMenuEntriesTable,
+          MealMenuEntry,
+          $$MealMenuEntriesTableFilterComposer,
+          $$MealMenuEntriesTableOrderingComposer,
+          $$MealMenuEntriesTableAnnotationComposer,
+          $$MealMenuEntriesTableCreateCompanionBuilder,
+          $$MealMenuEntriesTableUpdateCompanionBuilder,
+          (MealMenuEntry, $$MealMenuEntriesTableReferences),
+          MealMenuEntry,
+          PrefetchHooks Function({bool dailyMealMenuId})
+        > {
+  $$MealMenuEntriesTableTableManager(
+    _$AppDatabase db,
+    $MealMenuEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MealMenuEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MealMenuEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MealMenuEntriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> dailyMealMenuId = const Value.absent(),
+                Value<String> mealSection = const Value.absent(),
+                Value<String> menuText = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => MealMenuEntriesCompanion(
+                id: id,
+                dailyMealMenuId: dailyMealMenuId,
+                mealSection: mealSection,
+                menuText: menuText,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int dailyMealMenuId,
+                required String mealSection,
+                required String menuText,
+                Value<int> sortOrder = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => MealMenuEntriesCompanion.insert(
+                id: id,
+                dailyMealMenuId: dailyMealMenuId,
+                mealSection: mealSection,
+                menuText: menuText,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$MealMenuEntriesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({dailyMealMenuId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (dailyMealMenuId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.dailyMealMenuId,
+                                referencedTable:
+                                    $$MealMenuEntriesTableReferences
+                                        ._dailyMealMenuIdTable(db),
+                                referencedColumn:
+                                    $$MealMenuEntriesTableReferences
+                                        ._dailyMealMenuIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$MealMenuEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MealMenuEntriesTable,
+      MealMenuEntry,
+      $$MealMenuEntriesTableFilterComposer,
+      $$MealMenuEntriesTableOrderingComposer,
+      $$MealMenuEntriesTableAnnotationComposer,
+      $$MealMenuEntriesTableCreateCompanionBuilder,
+      $$MealMenuEntriesTableUpdateCompanionBuilder,
+      (MealMenuEntry, $$MealMenuEntriesTableReferences),
+      MealMenuEntry,
+      PrefetchHooks Function({bool dailyMealMenuId})
+    >;
 typedef $$RecipeGroupsTableCreateCompanionBuilder =
     RecipeGroupsCompanion Function({
       Value<int> id,
@@ -5120,6 +6632,10 @@ class $AppDatabaseManager {
       $$WeeklyListItemsTableTableManager(_db, _db.weeklyListItems);
   $$DailyMemosTableTableManager get dailyMemos =>
       $$DailyMemosTableTableManager(_db, _db.dailyMemos);
+  $$DailyMealMenusTableTableManager get dailyMealMenus =>
+      $$DailyMealMenusTableTableManager(_db, _db.dailyMealMenus);
+  $$MealMenuEntriesTableTableManager get mealMenuEntries =>
+      $$MealMenuEntriesTableTableManager(_db, _db.mealMenuEntries);
   $$RecipeGroupsTableTableManager get recipeGroups =>
       $$RecipeGroupsTableTableManager(_db, _db.recipeGroups);
 }

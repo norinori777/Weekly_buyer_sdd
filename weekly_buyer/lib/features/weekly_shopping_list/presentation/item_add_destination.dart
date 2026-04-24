@@ -13,6 +13,7 @@ class ItemAddDestination extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(selectedWeekDateProvider);
     final snapshot = ref.watch(weeklyShoppingSnapshotProvider(selectedDate));
+    final mealMenuSnapshot = ref.watch(mealMenuSnapshotProvider(selectedDate));
     final draft = ref.watch(itemAddDraftProvider);
 
     return Scaffold(
@@ -26,54 +27,83 @@ class ItemAddDestination extends ConsumerWidget {
           ),
         ),
         data: (data) {
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-            children: [
-              WeekHeader(
-                weekRange: data.weekRange,
-                selectedDate: selectedDate,
-                onDateSelected: (date) {
-                  ref.read(selectedWeekDateProvider.notifier).state = dateOnly(
-                    date,
-                  );
-                },
+          return mealMenuSnapshot.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stackTrace) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('読み込みに失敗しました: $error'),
               ),
-              const SizedBox(height: 8),
-              Text(
-                '週の曜日を切り替えながら、その曜日に登録する商品をまとめて入力できます。',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              for (final section in ShoppingSection.values.where(
-                (section) => !section.isDayIndependent,
-              )) ...[
-                _SectionPreviewCard(
-                  section: section,
-                  onDeleteItem: (item) async {
-                    await ref
-                        .read(weeklyShoppingRepositoryProvider)
-                        .deleteItem(item.id);
-                    ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
-                  },
-                  items: data.weekdaySections
-                      .firstWhere((entry) => entry.section == section)
-                      .items,
-                ),
-                const SizedBox(height: 12),
-              ],
-              DailyMemoEditor(
-                key: ValueKey('daily-memo-$selectedDate'),
-                selectedDate: selectedDate,
-                initialText: data.dailyMemo?.memoText ?? '',
-                onSave: (memoText) async {
-                  await ref.read(weeklyShoppingRepositoryProvider).saveDailyMemo(
-                        referenceDate: selectedDate,
-                        memoText: memoText,
+            ),
+            data: (menuData) {
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                children: [
+                  WeekHeader(
+                    weekRange: data.weekRange,
+                    selectedDate: selectedDate,
+                    onDateSelected: (date) {
+                      ref.read(selectedWeekDateProvider.notifier).state = dateOnly(
+                        date,
                       );
-                  ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
-                },
-              ),
-            ],
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '週の曜日を切り替えながら、その曜日に登録する商品をまとめて入力できます。',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  for (final section in ShoppingSection.values.where(
+                    (section) => !section.isDayIndependent,
+                  )) ...[
+                    _SectionPreviewCard(
+                      key: ValueKey('section-card-${section.name}-$selectedDate'),
+                      section: section,
+                      selectedDate: selectedDate,
+                      onDeleteItem: (item) async {
+                        await ref
+                            .read(weeklyShoppingRepositoryProvider)
+                            .deleteItem(item.id);
+                        ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
+                      },
+                      onDeleteMealMenuEntry: (entry) async {
+                        await ref.read(weeklyShoppingRepositoryProvider).deleteMealMenuEntry(entry);
+                        ref.invalidate(mealMenuSnapshotProvider(selectedDate));
+                      },
+                      onSaveMealMenuEntry: (entryText, mealSection) async {
+                        await ref.read(weeklyShoppingRepositoryProvider).saveMealMenuEntry(
+                              referenceDate: selectedDate,
+                              section: mealSection,
+                              menuText: entryText,
+                            );
+                        ref.invalidate(mealMenuSnapshotProvider(selectedDate));
+                      },
+                      items: data.weekdaySections
+                          .firstWhere((entry) => entry.section == section)
+                          .items,
+                      mealMenuEntries: menuData.sections
+                          .firstWhere((entry) => entry.section == section.mealSection)
+                          .entries,
+                      suggestions: menuData.suggestions,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  DailyMemoEditor(
+                    key: ValueKey('daily-memo-$selectedDate'),
+                    selectedDate: selectedDate,
+                    initialText: data.dailyMemo?.memoText ?? '',
+                    onSave: (memoText) async {
+                      await ref.read(weeklyShoppingRepositoryProvider).saveDailyMemo(
+                            referenceDate: selectedDate,
+                            memoText: memoText,
+                          );
+                      ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
+                    },
+                  ),
+                ],
+              );
+            },
           );
         },
       ),
@@ -152,14 +182,25 @@ class ItemAddDestination extends ConsumerWidget {
 
 class _SectionPreviewCard extends StatelessWidget {
   const _SectionPreviewCard({
+    super.key,
     required this.section,
+    required this.selectedDate,
     required this.items,
+    required this.mealMenuEntries,
+    required this.suggestions,
     required this.onDeleteItem,
+    required this.onDeleteMealMenuEntry,
+    required this.onSaveMealMenuEntry,
   });
 
   final ShoppingSection section;
+  final DateTime selectedDate;
   final List<ShoppingItemEntry> items;
+  final List<MealMenuEntry> mealMenuEntries;
+  final List<MealMenuSuggestion> suggestions;
   final Future<void> Function(ShoppingItemEntry item) onDeleteItem;
+  final Future<void> Function(int entryId) onDeleteMealMenuEntry;
+  final Future<void> Function(String entryText, MealSection section) onSaveMealMenuEntry;
 
   @override
   Widget build(BuildContext context) {
@@ -208,6 +249,16 @@ class _SectionPreviewCard extends StatelessWidget {
                 ),
                 const Divider(height: 1),
               ],
+            const SizedBox(height: 16),
+            MealMenuSectionEditor(
+              key: ValueKey('meal-menu-editor-${section.name}-$selectedDate'),
+              selectedDate: selectedDate,
+              section: section.mealSection!,
+              entries: mealMenuEntries,
+              suggestions: suggestions,
+              onSave: (menuText) => onSaveMealMenuEntry(menuText, section.mealSection!),
+              onDelete: onDeleteMealMenuEntry,
+            ),
           ],
         ),
       ),

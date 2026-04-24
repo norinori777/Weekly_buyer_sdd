@@ -189,6 +189,119 @@ void main() {
     expect(tuesdaySnapshot.dailyMemo?.memoText, '夫が夕飯不要');
   });
 
+  test('saves and reloads meal menus by section for the selected day', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    final monday = DateTime(2026, 4, 20);
+
+    await repository.saveMealMenuEntry(
+      referenceDate: monday,
+      section: MealSection.morning,
+      menuText: 'トースト',
+    );
+    await repository.saveMealMenuEntry(
+      referenceDate: monday,
+      section: MealSection.morning,
+      menuText: 'ヨーグルト',
+    );
+    await repository.saveMealMenuEntry(
+      referenceDate: monday,
+      section: MealSection.dinner,
+      menuText: 'カレー',
+    );
+
+    final entries = await repository.loadMealMenuEntries(monday);
+    expect(entries, hasLength(3));
+    expect(entries.where((entry) => entry.section == MealSection.morning), hasLength(2));
+    expect(entries.where((entry) => entry.section == MealSection.dinner), hasLength(1));
+
+    final snapshot = await repository.loadMealMenuSnapshot(monday);
+    expect(snapshot.selectedDate, DateTime(2026, 4, 20));
+    expect(
+      snapshot.sections.firstWhere((section) => section.section == MealSection.morning).entries,
+      hasLength(2),
+    );
+    expect(
+      snapshot.sections.firstWhere((section) => section.section == MealSection.dinner).entries.single.menuText,
+      'カレー',
+    );
+  });
+
+  test('keeps meal menu candidates and deletes individual entries', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    final monday = DateTime(2026, 4, 20);
+
+    await repository.saveMealMenuEntry(
+      referenceDate: monday,
+      section: MealSection.morning,
+      menuText: 'トースト',
+    );
+    await repository.saveMealMenuEntry(
+      referenceDate: monday,
+      section: MealSection.morning,
+      menuText: 'トースト',
+    );
+    await repository.saveMealMenuEntry(
+      referenceDate: monday,
+      section: MealSection.lunch,
+      menuText: 'パスタ',
+    );
+
+    final suggestions = await repository.loadMealMenuSuggestions();
+    expect(suggestions.first.text, 'トースト');
+    expect(suggestions.first.usageCount, 2);
+
+    final entriesBeforeDelete = await repository.loadMealMenuEntries(monday);
+    final toastEntry = entriesBeforeDelete.firstWhere((entry) => entry.menuText == 'トースト');
+    await repository.deleteMealMenuEntry(toastEntry.id);
+
+    final entriesAfterDelete = await repository.loadMealMenuEntries(monday);
+    expect(entriesAfterDelete.where((entry) => entry.menuText == 'トースト'), hasLength(1));
+    expect(entriesAfterDelete.where((entry) => entry.menuText == 'パスタ'), hasLength(1));
+  });
+
+  test('keeps meal menus isolated by day within the active week', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    final monday = DateTime(2026, 4, 20);
+    final tuesday = DateTime(2026, 4, 21);
+
+    await repository.saveMealMenuEntry(
+      referenceDate: monday,
+      section: MealSection.morning,
+      menuText: 'トースト',
+    );
+    await repository.saveMealMenuEntry(
+      referenceDate: tuesday,
+      section: MealSection.morning,
+      menuText: 'おにぎり',
+    );
+
+    expect(
+      await repository.loadMealMenuEntries(monday),
+      hasLength(1),
+    );
+    expect(
+      await repository.loadMealMenuEntries(tuesday),
+      hasLength(1),
+    );
+    expect(
+      (await repository.loadMealMenuEntries(monday)).single.menuText,
+      'トースト',
+    );
+    expect(
+      (await repository.loadMealMenuEntries(tuesday)).single.menuText,
+      'おにぎり',
+    );
+  });
+
   test(
     'deletes a selected item without affecting the remaining weekday items',
     () async {

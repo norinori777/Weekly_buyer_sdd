@@ -18,6 +18,25 @@ class WeekRange {
   final DateTime end;
 }
 
+enum MealSection { morning, lunch, dinner }
+
+extension MealSectionLabel on MealSection {
+  String get label => switch (this) {
+        MealSection.morning => '朝',
+        MealSection.lunch => '昼',
+        MealSection.dinner => '夜',
+      };
+}
+
+extension ShoppingSectionMealSection on ShoppingSection {
+  MealSection? get mealSection => switch (this) {
+        ShoppingSection.morning => MealSection.morning,
+        ShoppingSection.afternoon => MealSection.lunch,
+        ShoppingSection.evening => MealSection.dinner,
+        ShoppingSection.other => null,
+      };
+}
+
 class DailyMemoEntry {
   const DailyMemoEntry({
     required this.id,
@@ -34,6 +53,61 @@ class DailyMemoEntry {
   final String memoText;
   final DateTime createdAt;
   final DateTime updatedAt;
+}
+
+class MealMenuEntry {
+  const MealMenuEntry({
+    required this.id,
+    required this.weekStartDate,
+    required this.weekday,
+    required this.section,
+    required this.menuText,
+    required this.sortOrder,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final int id;
+  final DateTime weekStartDate;
+  final int weekday;
+  final MealSection section;
+  final String menuText;
+  final int sortOrder;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+}
+
+class MealMenuSuggestion {
+  const MealMenuSuggestion({
+    required this.text,
+    required this.usageCount,
+    required this.lastUsedAt,
+  });
+
+  final String text;
+  final int usageCount;
+  final DateTime lastUsedAt;
+}
+
+class MealMenuSectionEntries {
+  const MealMenuSectionEntries({required this.section, required this.entries});
+
+  final MealSection section;
+  final List<MealMenuEntry> entries;
+}
+
+class MealMenuDaySnapshot {
+  const MealMenuDaySnapshot({
+    required this.weekRange,
+    required this.selectedDate,
+    required this.sections,
+    required this.suggestions,
+  });
+
+  final WeekRange weekRange;
+  final DateTime selectedDate;
+  final List<MealMenuSectionEntries> sections;
+  final List<MealMenuSuggestion> suggestions;
 }
 
 class CategoryEntry {
