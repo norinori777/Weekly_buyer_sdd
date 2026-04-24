@@ -5,7 +5,7 @@
 
 ## Summary
 
-商品登録画面の朝・昼・夜セクションに、その日の料理メニューを複数件入力・選択・削除できるようにする。メニューは商品データと分離した日次の文脈情報として扱い、購入リスト画面には表示しない。既存の週選択状態と商品登録画面の導線を維持しながら、各セクション見出しの下に入力欄、候補リスト、登録済みメニュー一覧を追加する。
+商品登録画面の朝・昼・夜セクション右上に追加ボタンを置き、押下時に下からスライドアップする入力フォームでその日の料理メニューを登録できるようにする。メニューは商品データと分離した日次の文脈情報として扱い、購入リスト画面には表示しない。既存の週選択状態と商品登録画面の導線を維持しながら、各セクションの旧来の入力欄・クリアボタン・保存ボタンを廃止し、追加ボタン起点の単一フォーム導線へ置き換える。
 
 ## Technical Context
 
@@ -15,8 +15,8 @@
 **Testing**: flutter analyze, flutter test, repository tests, widget tests  
 **Target Platform**: Flutter mobile app targets used by the existing workspace  
 **Project Type**: Mobile app  
-**Performance Goals**: 日付切り替え、候補表示、✖による削除が即時に反映されること  
-**Constraints**: Offline-first, local-only persistence, multi-entry per section, candidate suggestions below the input field, meal menus must never appear on the purchase list  
+**Performance Goals**: 日付切り替えと追加フォームの表示が即時に反映されること  
+**Constraints**: Offline-first, local-only persistence, multi-entry per section, slide-up input form, meal menus must never appear on the purchase list  
 **Scale/Scope**: 単一 Flutter アプリ内の週次買い物画面と商品登録画面
 
 ## Constitution Check
@@ -75,8 +75,8 @@ weekly_buyer/
 
 - 日次メニューは商品データと分離した独立エンティティにする。買い物リストと役割が異なるため、商品行への追記は採用しない。
 - 1日 × 朝・昼・夜の区分で管理し、各区分は複数件のメニューを保持できるようにする。
-- 候補は入力欄の直下に表示し、自由入力と候補選択の両方を同じ画面内で完結させる。
-- 登録済みメニューは各行の左横の✖で個別に削除できるようにする。
+- メニュー入力は各セクション右上の追加ボタンから下部フォームを開いて行う。
+- 旧来の各セクション内テキストボックス、クリアボタン、保存ボタンは廃止する。
 - 空の区分は表示しないことで、商品登録画面の情報量を抑える。
 - 購入リスト画面にはメニューを参照しないことで、私用情報の混入を防ぐ。
 - 検証は repository と widget に分け、保存ロジックと画面ロジックを切り分ける。
@@ -85,8 +85,7 @@ weekly_buyer/
 
 - `DailyMealMenu` と `MealMenuEntry` を新規エンティティとして定義する。
 - `MealMenuEntry` は `meal_section` と `sort_order` を持ち、同じ区分に複数件を追加できるようにする。
-- `MenuSuggestion` は候補表示のための独立データとして扱い、再利用しやすいローカル候補にする。
-- repository は選択中の日付に対するメニュー一覧の読み書きと、候補の取得を担当する。
+- repository は選択中の日付に対するメニュー一覧の読み書きを担当する。
 - 画面側は日付切り替えに追従し、保存済みメニューをセクション見出しの下へ再表示する。
 - 購入リスト画面ではメニュー関連のデータを読み込まず、表示対象から除外する。
 

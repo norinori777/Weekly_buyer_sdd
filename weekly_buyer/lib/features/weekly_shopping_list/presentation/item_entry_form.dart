@@ -32,6 +32,113 @@ class ItemEntryForm extends StatefulWidget {
   State<ItemEntryForm> createState() => _ItemEntryFormState();
 }
 
+class MealMenuAddSheet extends StatefulWidget {
+  const MealMenuAddSheet({
+    super.key,
+    required this.section,
+    required this.onSubmit,
+    this.onCancel,
+  });
+
+  final MealSection section;
+  final ValueChanged<String> onSubmit;
+  final VoidCallback? onCancel;
+
+  @override
+  State<MealMenuAddSheet> createState() => _MealMenuAddSheetState();
+}
+
+class _MealMenuAddSheetState extends State<MealMenuAddSheet> {
+  late final TextEditingController _menuController;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _menuController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _menuController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_isSaving) {
+      return;
+    }
+
+    final normalized = _menuController.text.trim();
+    if (normalized.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+    try {
+      widget.onSubmit(normalized);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canSubmit = !_isSaving && _menuController.text.trim().isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${widget.section.label}の料理メニュー追加',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            TextButton(
+              onPressed: _isSaving
+                  ? null
+                  : () {
+                      widget.onCancel?.call();
+                    },
+              child: const Text('キャンセル'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _menuController,
+          minLines: 1,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: 'メニュー',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (_) => setState(() {}),
+          onSubmitted: (_) => _submit(),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: canSubmit ? _submit : null,
+            child: Text(_isSaving ? '登録中...' : '登録する'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class DailyMemoEditor extends StatefulWidget {
   const DailyMemoEditor({
     super.key,

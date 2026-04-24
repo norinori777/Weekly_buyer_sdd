@@ -33,51 +33,51 @@
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
 - [X] T005 Add repository regression tests for creating and loading meal-menu entries by day and meal section in `weekly_buyer/test/repository_test.dart`.
-- [X] T006 Add widget regression tests for initial meal-menu area visibility and empty-section hiding in `weekly_buyer/test/widget_test.dart`.
+- [X] T006 Add widget regression tests for section add-button visibility, slide-up form opening, and empty-section hiding in `weekly_buyer/test/widget_test.dart`.
 
 **Checkpoint**: The repository and widget harness can exercise the baseline meal-menu behavior for a selected day.
 
 ---
 
-## Phase 3: User Story 1 - 朝昼夜ごとに料理メニューを入力する (Priority: P1)
+## Phase 3: User Story 1 - セクションごとにメニューを追加する (Priority: P1)
 
-**Goal**: ユーザーが商品登録画面の朝・昼・夜の各セクションに、その日の料理メニューを自由入力で追加できる。
+**Goal**: ユーザーが商品登録画面の朝・昼・夜の各セクション右上から、下からスライドアップする入力フォームを開いて料理メニューを追加できる。
 
-**Independent Test**: 商品登録画面を開き、朝・昼・夜の各セクションに複数の料理メニューを入力して、保存後に同じ見出しの下へ表示される。
+**Independent Test**: 商品登録画面を開き、朝・昼・夜の各セクション右上の追加ボタンから入力フォームを開いてメニューを登録し、保存後に同じセクションへ表示される。
 
 ### Tests for User Story 1
 
 - [X] T007 [P] [US1] Add repository regression tests for saving multiple meal-menu entries in the same section for the same day in `weekly_buyer/test/repository_test.dart`.
-- [X] T008 [P] [US1] Add widget regression tests for entering meal menus and seeing them appear under the matching section heading in `weekly_buyer/test/widget_test.dart`.
+- [X] T008 [P] [US1] Add widget regression tests for opening the slide-up form from each section and seeing saved menus appear under the matching section heading in `weekly_buyer/test/widget_test.dart`.
 
 ### Implementation for User Story 1
 
-- [X] T009 [US1] Add the meal-menu entry areas under the morning, lunch, and dinner headings in `weekly_buyer/lib/features/weekly_shopping_list/presentation/item_add_destination.dart`.
-- [X] T010 [US1] Add the reusable meal-menu editor UI and section rendering logic in `weekly_buyer/lib/features/weekly_shopping_list/presentation/item_entry_form.dart`.
+- [X] T009 [US1] Add the meal-menu add buttons at the upper right of the morning, lunch, and dinner sections in `weekly_buyer/lib/features/weekly_shopping_list/presentation/item_add_destination.dart`.
+- [X] T010 [US1] Add the slide-up meal-menu input form and its cancel/register actions in `weekly_buyer/lib/features/weekly_shopping_list/presentation/item_entry_form.dart`.
 - [X] T011 [US1] Extend `weekly_buyer/lib/features/weekly_shopping_list/data/weekly_shopping_repository.dart` so the selected day can save and reload multiple meal-menu entries without affecting purchase-list data.
 
 **Checkpoint**: Meal menus can be entered, saved, and restored for the selected day without changing the purchase flow.
 
 ---
 
-## Phase 4: User Story 2 - 候補から素早く選んで、✖で消せるようにする (Priority: P1)
+## Phase 4: User Story 2 - 入力を取り消して閉じる (Priority: P1)
 
-**Goal**: ユーザーが自由入力の下に表示される候補を選び、登録済みメニューを✖ボタンで個別に消せる。
+**Goal**: ユーザーが入力フォームのキャンセルボタンで編集を取り消して閉じられる。
 
-**Independent Test**: 料理メニュー入力欄の下に候補が表示され、候補を選んで登録でき、登録済みメニューの左横の✖ボタンで個別に消せる。
+**Independent Test**: 入力フォームを開き、メニューを入力した状態でもキャンセルボタンを押してフォームが閉じ、保存されないことを確認できる。
 
 ### Tests for User Story 2
 
-- [X] T012 [P] [US2] Add repository regression tests for candidate lookup and per-entry delete behavior in `weekly_buyer/test/repository_test.dart`.
-- [X] T013 [P] [US2] Add widget regression tests for candidate suggestions below the input field and ✖ deletion in `weekly_buyer/test/widget_test.dart`.
+- [X] T012 [P] [US2] Add repository regression tests for canceling an add flow without persisting data in `weekly_buyer/test/repository_test.dart`.
+- [X] T013 [P] [US2] Add widget regression tests for the cancel button closing the slide-up form without saving in `weekly_buyer/test/widget_test.dart`.
 
 ### Implementation for User Story 2
 
-- [X] T014 [US2] Add candidate suggestion lookup and selection handling in `weekly_buyer/lib/features/weekly_shopping_list/data/weekly_shopping_repository.dart` and `weekly_buyer/lib/features/weekly_shopping_list/domain/weekly_shopping_models.dart`.
-- [X] T015 [US2] Render candidate suggestions below the meal-menu input field and wire candidate selection in `weekly_buyer/lib/features/weekly_shopping_list/presentation/item_entry_form.dart`.
-- [X] T016 [US2] Add the left-side ✖ control for saved meal-menu entries and wire per-entry deletion in `weekly_buyer/lib/features/weekly_shopping_list/presentation/item_add_destination.dart` and `weekly_buyer/lib/features/weekly_shopping_list/presentation/item_entry_form.dart`.
+- [X] T014 [US2] Wire the cancel action so it closes the slide-up input form without changing stored meal-menu data in `weekly_buyer/lib/features/weekly_shopping_list/presentation/item_entry_form.dart`.
+- [X] T015 [US2] Ensure the section-level inline text boxes, clear buttons, and save buttons are removed from `weekly_buyer/lib/features/weekly_shopping_list/presentation/item_add_destination.dart`.
+- [X] T016 [US2] Keep the add-flow state local to the selected section so canceling does not create or modify any meal-menu entry in `weekly_buyer/lib/features/weekly_shopping_list/data/weekly_shopping_repository.dart`.
 
-**Checkpoint**: Users can pick suggested meal menus quickly and remove individual entries with ✖.
+**Checkpoint**: Users can open the add form and back out without saving anything.
 
 ---
 
@@ -154,7 +154,7 @@
 ### Incremental Delivery
 
 1. Build the add/save/load meal-menu flow for User Story 1.
-2. Add candidate suggestions and ✖ deletion for User Story 2.
+2. Add the cancel-and-close behavior for User Story 2.
 3. Add day-isolation and purchase-list exclusion for User Story 3.
 4. Run validation after each story to keep the feature independently testable.
 

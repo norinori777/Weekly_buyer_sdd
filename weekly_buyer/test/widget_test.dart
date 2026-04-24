@@ -342,12 +342,11 @@ void main() {
     expect(find.text('夫は夕飯いらない'), findsWidgets);
   });
 
-  testWidgets('shows meal menu areas and saves entries under the matching section', (
+  testWidgets('shows meal menu add buttons and saves entries under the matching section', (
     WidgetTester tester,
   ) async {
     final database = AppDatabase(executor: NativeDatabase.memory());
     addTearDown(database.close);
-    final repository = WeeklyShoppingRepository(database);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -361,38 +360,24 @@ void main() {
     await tester.tap(find.text('商品追加'));
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -900));
+    expect(find.text('料理メニュー追加'), findsWidgets);
+
+    await tester.tap(find.text('料理メニュー追加').first);
     await tester.pumpAndSettle();
 
-    expect(find.byType(TextField), findsWidgets);
-
+    expect(find.text('朝の料理メニュー追加'), findsOneWidget);
     await tester.enterText(find.byType(TextField).first, 'トースト');
-    await repository.saveMealMenuEntry(
-      referenceDate: DateTime(2026, 4, 20),
-      section: MealSection.morning,
-      menuText: 'トースト',
-    );
+    await tester.tap(find.text('登録する'));
     await tester.pumpAndSettle();
 
-    expect(
-      (await database.select(database.mealMenuEntries).get())
-          .where((row) => row.menuText == 'トースト'),
-      hasLength(1),
-    );
+    expect(find.text('トースト'), findsOneWidget);
   });
 
-  testWidgets('shows meal menu candidates and clears entries with the left close button', (
+  testWidgets('cancels meal-menu add sheet without saving', (
     WidgetTester tester,
   ) async {
     final database = AppDatabase(executor: NativeDatabase.memory());
     addTearDown(database.close);
-
-    final repository = WeeklyShoppingRepository(database);
-    await repository.saveMealMenuEntry(
-      referenceDate: DateTime(2026, 4, 20),
-      section: MealSection.morning,
-      menuText: 'トースト',
-    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -406,38 +391,14 @@ void main() {
     await tester.tap(find.text('商品追加'));
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -900));
+    await tester.tap(find.text('料理メニュー追加').first);
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, 'トー');
+    await tester.enterText(find.byType(TextField).first, 'カレー');
+    await tester.tap(find.text('キャンセル').last);
     await tester.pumpAndSettle();
 
-    final candidateChip = find.widgetWithText(ActionChip, 'トースト').first;
-    await tester.ensureVisible(candidateChip);
-    expect(candidateChip, findsOneWidget);
-
-    await repository.saveMealMenuEntry(
-      referenceDate: DateTime(2026, 4, 20),
-      section: MealSection.morning,
-      menuText: 'トースト',
-    );
-    await tester.pumpAndSettle();
-
-    expect(
-      (await database.select(database.mealMenuEntries).get())
-          .where((row) => row.menuText == 'トースト'),
-      hasLength(2),
-    );
-
-    final firstMenuRow = (await database.select(database.mealMenuEntries).get())
-        .firstWhere((row) => row.menuText == 'トースト');
-    await repository.deleteMealMenuEntry(firstMenuRow.id);
-
-    expect(
-      (await database.select(database.mealMenuEntries).get())
-          .where((row) => row.menuText == 'トースト'),
-      hasLength(1),
-    );
+    expect(find.text('カレー'), findsNothing);
   });
 
   testWidgets('does not show meal menus on the purchase list screen', (

@@ -229,7 +229,7 @@ void main() {
     );
   });
 
-  test('keeps meal menu candidates and deletes individual entries', () async {
+  test('ignores blank meal menu text and keeps saved entries', () async {
     final database = AppDatabase(executor: NativeDatabase.memory());
     addTearDown(database.close);
 
@@ -251,18 +251,15 @@ void main() {
       section: MealSection.lunch,
       menuText: 'パスタ',
     );
+    await repository.saveMealMenuEntry(
+      referenceDate: monday,
+      section: MealSection.lunch,
+      menuText: '   ',
+    );
 
-    final suggestions = await repository.loadMealMenuSuggestions();
-    expect(suggestions.first.text, 'トースト');
-    expect(suggestions.first.usageCount, 2);
-
-    final entriesBeforeDelete = await repository.loadMealMenuEntries(monday);
-    final toastEntry = entriesBeforeDelete.firstWhere((entry) => entry.menuText == 'トースト');
-    await repository.deleteMealMenuEntry(toastEntry.id);
-
-    final entriesAfterDelete = await repository.loadMealMenuEntries(monday);
-    expect(entriesAfterDelete.where((entry) => entry.menuText == 'トースト'), hasLength(1));
-    expect(entriesAfterDelete.where((entry) => entry.menuText == 'パスタ'), hasLength(1));
+    final entries = await repository.loadMealMenuEntries(monday);
+    expect(entries.where((entry) => entry.menuText == 'トースト'), hasLength(2));
+    expect(entries.where((entry) => entry.menuText == 'パスタ'), hasLength(1));
   });
 
   test('keeps meal menus isolated by day within the active week', () async {

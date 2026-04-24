@@ -60,24 +60,19 @@ class ItemAddDestination extends ConsumerWidget {
                     _SectionPreviewCard(
                       key: ValueKey('section-card-${section.name}-$selectedDate'),
                       section: section,
-                      selectedDate: selectedDate,
                       onDeleteItem: (item) async {
                         await ref
                             .read(weeklyShoppingRepositoryProvider)
                             .deleteItem(item.id);
                         ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
                       },
-                      onDeleteMealMenuEntry: (entry) async {
-                        await ref.read(weeklyShoppingRepositoryProvider).deleteMealMenuEntry(entry);
-                        ref.invalidate(mealMenuSnapshotProvider(selectedDate));
-                      },
-                      onSaveMealMenuEntry: (entryText, mealSection) async {
-                        await ref.read(weeklyShoppingRepositoryProvider).saveMealMenuEntry(
-                              referenceDate: selectedDate,
-                              section: mealSection,
-                              menuText: entryText,
-                            );
-                        ref.invalidate(mealMenuSnapshotProvider(selectedDate));
+                      onAddMealMenuEntry: (mealSection) async {
+                        await _openMealMenuSheet(
+                          context: context,
+                          ref: ref,
+                          selectedDate: selectedDate,
+                          section: mealSection,
+                        );
                       },
                       items: data.weekdaySections
                           .firstWhere((entry) => entry.section == section)
@@ -85,7 +80,6 @@ class ItemAddDestination extends ConsumerWidget {
                       mealMenuEntries: menuData.sections
                           .firstWhere((entry) => entry.section == section.mealSection)
                           .entries,
-                      suggestions: menuData.suggestions,
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -178,29 +172,64 @@ class ItemAddDestination extends ConsumerWidget {
     );
     ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
   }
+
+  Future<void> _openMealMenuSheet({
+    required BuildContext context,
+    required WidgetRef ref,
+    required DateTime selectedDate,
+    required MealSection section,
+  }) async {
+    final menuText = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+            top: 8,
+          ),
+          child: SingleChildScrollView(
+            child: MealMenuAddSheet(
+              section: section,
+              onCancel: () => Navigator.of(sheetContext).pop(),
+              onSubmit: (value) => Navigator.of(sheetContext).pop(value),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (menuText == null) {
+      return;
+    }
+
+    await ref.read(weeklyShoppingRepositoryProvider).saveMealMenuEntry(
+          referenceDate: selectedDate,
+          section: section,
+          menuText: menuText,
+        );
+    ref.invalidate(mealMenuSnapshotProvider(selectedDate));
+  }
 }
 
 class _SectionPreviewCard extends StatelessWidget {
   const _SectionPreviewCard({
     super.key,
     required this.section,
-    required this.selectedDate,
     required this.items,
     required this.mealMenuEntries,
-    required this.suggestions,
     required this.onDeleteItem,
-    required this.onDeleteMealMenuEntry,
-    required this.onSaveMealMenuEntry,
+    required this.onAddMealMenuEntry,
   });
 
   final ShoppingSection section;
-  final DateTime selectedDate;
   final List<ShoppingItemEntry> items;
   final List<MealMenuEntry> mealMenuEntries;
-  final List<MealMenuSuggestion> suggestions;
   final Future<void> Function(ShoppingItemEntry item) onDeleteItem;
-  final Future<void> Function(int entryId) onDeleteMealMenuEntry;
-  final Future<void> Function(String entryText, MealSection section) onSaveMealMenuEntry;
+  final Future<void> Function(MealSection section) onAddMealMenuEntry;
 
   @override
   Widget build(BuildContext context) {
@@ -217,6 +246,13 @@ class _SectionPreviewCard extends StatelessWidget {
                     '${section.label} ${items.length}件',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
+                ),
+                TextButton.icon(
+                  onPressed: section.mealSection == null
+                      ? null
+                      : () => onAddMealMenuEntry(section.mealSection!),
+                  icon: const Icon(Icons.add),
+                  label: const Text('料理メニュー追加'),
                 ),
               ],
             ),
@@ -250,15 +286,29 @@ class _SectionPreviewCard extends StatelessWidget {
                 const Divider(height: 1),
               ],
             const SizedBox(height: 16),
-            MealMenuSectionEditor(
-              key: ValueKey('meal-menu-editor-${section.name}-$selectedDate'),
-              selectedDate: selectedDate,
-              section: section.mealSection!,
-              entries: mealMenuEntries,
-              suggestions: suggestions,
-              onSave: (menuText) => onSaveMealMenuEntry(menuText, section.mealSection!),
-              onDelete: onDeleteMealMenuEntry,
+            Text(
+              '${section.label}の料理メニュー',
+              style: Theme.of(context).textTheme.titleSmall,
             ),
+            const SizedBox(height: 8),
+            if (mealMenuEntries.isEmpty)
+              Text(
+                'まだ登録されていません。',
+                style: Theme.of(context).textTheme.bodyMedium,
+              )
+            else
+              for (final entry in mealMenuEntries) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('・'),
+                      Expanded(child: Text(entry.menuText)),
+                    ],
+                  ),
+                ),
+              ],
           ],
         ),
       ),
