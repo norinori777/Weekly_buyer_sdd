@@ -121,6 +121,74 @@ void main() {
     },
   );
 
+  test('saves and reloads a private memo for the selected day', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    final monday = DateTime(2026, 4, 20);
+
+    await repository.saveDailyMemo(
+      referenceDate: monday,
+      memoText: '夫は夕飯いらない',
+    );
+
+    final memo = await repository.loadDailyMemo(monday);
+    expect(memo, isNotNull);
+    expect(memo!.memoText, '夫は夕飯いらない');
+    expect(memo.weekday, DateTime.monday);
+
+    final snapshot = await repository.loadWeek(monday);
+    expect(snapshot.dailyMemo?.memoText, '夫は夕飯いらない');
+  });
+
+  test('clears a memo when the saved text becomes blank', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    final monday = DateTime(2026, 4, 20);
+
+    await repository.saveDailyMemo(
+      referenceDate: monday,
+      memoText: '休み',
+    );
+    await repository.saveDailyMemo(
+      referenceDate: monday,
+      memoText: '   ',
+    );
+
+    expect(await repository.loadDailyMemo(monday), isNull);
+    final snapshot = await repository.loadWeek(monday);
+    expect(snapshot.dailyMemo, isNull);
+  });
+
+  test('keeps private memos isolated by day within the active week', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    final monday = DateTime(2026, 4, 20);
+    final tuesday = DateTime(2026, 4, 21);
+
+    await repository.saveDailyMemo(
+      referenceDate: monday,
+      memoText: '休み',
+    );
+    await repository.saveDailyMemo(
+      referenceDate: tuesday,
+      memoText: '夫が夕飯不要',
+    );
+
+    expect((await repository.loadDailyMemo(monday))?.memoText, '休み');
+    expect((await repository.loadDailyMemo(tuesday))?.memoText, '夫が夕飯不要');
+
+    final mondaySnapshot = await repository.loadWeek(monday);
+    final tuesdaySnapshot = await repository.loadWeek(tuesday);
+    expect(mondaySnapshot.dailyMemo?.memoText, '休み');
+    expect(tuesdaySnapshot.dailyMemo?.memoText, '夫が夕飯不要');
+  });
+
   test(
     'deletes a selected item without affecting the remaining weekday items',
     () async {

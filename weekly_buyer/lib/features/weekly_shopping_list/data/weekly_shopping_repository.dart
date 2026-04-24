@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 
-import '../../../app/app_database.dart';
+import '../../../app/app_database.dart' hide DailyMemo;
 import '../domain/weekly_shopping_models.dart';
 
 class WeeklyShoppingRepository {
@@ -14,6 +14,58 @@ class WeeklyShoppingRepository {
 
   Future<List<ItemCandidate>> loadItemMasters() {
     return _loadItemMasters();
+  }
+
+  Future<DailyMemoEntry?> loadDailyMemo(DateTime referenceDate) async {
+    return _loadDailyMemo(referenceDate);
+  }
+
+  Future<void> saveDailyMemo({
+    required DateTime referenceDate,
+    required String memoText,
+  }) async {
+    final weekStart = startOfWeek(referenceDate);
+    final weekday = dateOnly(referenceDate).weekday;
+    final normalizedText = memoText;
+
+    await _database.transaction(() async {
+      final existing = await (_database.select(_database.dailyMemos)
+            ..where(
+              (table) =>
+                  table.weekStartDate.equals(weekStart) &
+                  table.weekday.equals(weekday),
+            ))
+          .getSingleOrNull();
+
+      if (normalizedText.trim().isEmpty) {
+        if (existing != null) {
+          await (_database.delete(_database.dailyMemos)
+                ..where((table) => table.id.equals(existing.id)))
+              .go();
+        }
+        return;
+      }
+
+      if (existing == null) {
+        await _database.into(_database.dailyMemos).insert(
+              DailyMemosCompanion.insert(
+                weekStartDate: weekStart,
+                weekday: weekday,
+                memoText: normalizedText,
+              ),
+            );
+        return;
+      }
+
+      await (_database.update(
+        _database.dailyMemos,
+      )..where((table) => table.id.equals(existing.id))).write(
+        DailyMemosCompanion(
+          memoText: Value(normalizedText),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+    });
   }
 
   Future<CategoryEntry> addCategory(String name) async {
@@ -181,6 +233,7 @@ class WeeklyShoppingRepository {
     final weekStart = startOfWeek(referenceDate);
     final weekEnd = endOfWeek(referenceDate);
     final weeklyList = await _ensureWeeklyList(weekStart, weekEnd);
+    final dailyMemo = await _loadDailyMemo(referenceDate);
 
     final categories = await loadCategories();
     final categoryNames = {
@@ -252,6 +305,7 @@ class WeeklyShoppingRepository {
     return WeeklyShoppingSnapshot(
       weekRange: WeekRange(start: weekStart, end: weekEnd),
       selectedDate: dateOnly(referenceDate),
+      dailyMemo: dailyMemo,
       categories: categories,
       categoryGroups: groupedEntries,
       sections: sections,
@@ -534,6 +588,30 @@ class WeeklyShoppingRepository {
   Future<Map<int, String>> _categoryNamesById() async {
     final categories = await loadCategories();
     return {for (final category in categories) category.id: category.name};
+  }
+
+  Future<DailyMemoEntry?> _loadDailyMemo(DateTime referenceDate) async {
+    final weekStart = startOfWeek(referenceDate);
+    final weekday = dateOnly(referenceDate).weekday;
+    final row = await (_database.select(_database.dailyMemos)
+          ..where(
+            (table) =>
+                table.weekStartDate.equals(weekStart) & table.weekday.equals(weekday),
+          ))
+        .getSingleOrNull();
+
+    if (row == null) {
+      return null;
+    }
+
+    return DailyMemoEntry(
+      id: row.id,
+      weekStartDate: row.weekStartDate,
+      weekday: row.weekday,
+      memoText: row.memoText,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    );
   }
 
   Future<int> _countWeekReferences(int itemId, DateTime weekStart) async {

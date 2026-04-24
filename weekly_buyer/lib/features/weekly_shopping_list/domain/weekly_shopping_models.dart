@@ -18,6 +18,24 @@ class WeekRange {
   final DateTime end;
 }
 
+class DailyMemoEntry {
+  const DailyMemoEntry({
+    required this.id,
+    required this.weekStartDate,
+    required this.weekday,
+    required this.memoText,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final int id;
+  final DateTime weekStartDate;
+  final int weekday;
+  final String memoText;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+}
+
 class CategoryEntry {
   const CategoryEntry({
     required this.id,
@@ -147,6 +165,7 @@ class WeeklyShoppingSnapshot {
   const WeeklyShoppingSnapshot({
     required this.weekRange,
     required this.selectedDate,
+    required this.dailyMemo,
     required this.categories,
     required this.categoryGroups,
     required this.sections,
@@ -158,6 +177,7 @@ class WeeklyShoppingSnapshot {
 
   final WeekRange weekRange;
   final DateTime selectedDate;
+  final DailyMemoEntry? dailyMemo;
   final List<CategoryEntry> categories;
   final List<ShoppingCategoryGroup> categoryGroups;
   final List<ShoppingSectionItems> sections;
