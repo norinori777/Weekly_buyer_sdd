@@ -162,11 +162,15 @@ class DailyMemoEditor extends StatefulWidget {
 class _DailyMemoEditorState extends State<DailyMemoEditor> {
   late final TextEditingController _memoController;
   bool _isSaving = false;
+  String? _queuedMemoText;
+  Future<void>? _saveLoop;
+  String? _lastSavedText;
 
   @override
   void initState() {
     super.initState();
     _memoController = TextEditingController(text: widget.initialText);
+    _lastSavedText = widget.initialText;
   }
 
   @override
@@ -175,21 +179,44 @@ class _DailyMemoEditorState extends State<DailyMemoEditor> {
     super.dispose();
   }
 
-  Future<void> _handleSave(String memoText) async {
-    if (_isSaving) {
+  void _handleMemoChanged(String memoText) {
+    if (memoText == _lastSavedText && _queuedMemoText == null && _saveLoop == null) {
       return;
     }
 
-    setState(() {
-      _isSaving = true;
-    });
+    _queuedMemoText = memoText;
+    if (_saveLoop == null) {
+      _saveLoop = _drainSaveQueue();
+    }
+  }
+
+  Future<void> _drainSaveQueue() async {
     try {
-      await widget.onSave(memoText);
-    } finally {
-      if (mounted) {
+      while (mounted && _queuedMemoText != null) {
+        final memoText = _queuedMemoText!;
+        _queuedMemoText = null;
+        if (_lastSavedText == memoText) {
+          continue;
+        }
+
         setState(() {
-          _isSaving = false;
+          _isSaving = true;
         });
+        try {
+          await widget.onSave(memoText);
+          _lastSavedText = memoText;
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isSaving = false;
+            });
+          }
+        }
+      }
+    } finally {
+      _saveLoop = null;
+      if (mounted && _queuedMemoText != null) {
+        _saveLoop = _drainSaveQueue();
       }
     }
   }
@@ -228,6 +255,7 @@ class _DailyMemoEditorState extends State<DailyMemoEditor> {
                 alignLabelWithHint: true,
                 border: OutlineInputBorder(),
               ),
+              onChanged: _handleMemoChanged,
             ),
             const SizedBox(height: 12),
             if (!widget.enabled)
@@ -235,33 +263,18 @@ class _DailyMemoEditorState extends State<DailyMemoEditor> {
                 '前の週では編集できません。',
                 style: Theme.of(context).textTheme.bodySmall,
               )
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isSaving
-                          ? null
-                          : () async {
-                              _memoController.clear();
-                              await _handleSave('');
-                            },
-                      child: const Text('クリア'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _isSaving
-                          ? null
-                          : () async {
-                              await _handleSave(_memoController.text);
-                            },
-                      child: Text(_isSaving ? '保存中...' : '保存'),
-                    ),
-                  ),
-                ],
+            else ...[
+              Text(
+                '入力内容は自動で保存されます。',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
+              const SizedBox(height: 4),
+              if (_isSaving)
+                Text(
+                  '保存中...',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+            ],
           ],
         ),
       ),
