@@ -557,6 +557,131 @@ void main() {
     expect(find.text(expectedLabel), findsOneWidget);
   });
 
+  testWidgets('keeps the existing item add flow closing after a normal save', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品を追加'));
+    await tester.pumpAndSettle();
+
+    final bottomSheet = find.byType(BottomSheet);
+    final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
+    await tester.enterText(sheetTextFields.at(0), 'テスト豆腐');
+    await tester.enterText(sheetTextFields.at(1), '2');
+
+    await tester.tap(find.text('登録する'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet), findsNothing);
+
+    final repository = WeeklyShoppingRepository(database);
+    final savedWeek = await repository.loadWeek(_nextWeekStart());
+    expect(
+      savedWeek.weekdaySections
+          .firstWhere((section) => section.section == ShoppingSection.morning)
+          .items
+          .any((item) => item.name == 'テスト豆腐'),
+      isTrue,
+    );
+  });
+
+  testWidgets('keeps the item add form open across repeated continue-add saves', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品を追加'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('次も登録'), findsOneWidget);
+    expect(find.text('保存して続けて入力できます'), findsOneWidget);
+
+    Future<void> enterAndContinue(String name, String quantity) async {
+      final bottomSheet = find.byType(BottomSheet);
+      final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
+      await tester.enterText(sheetTextFields.at(0), name);
+      await tester.enterText(sheetTextFields.at(1), quantity);
+      await tester.tap(find.text('次も登録'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BottomSheet), findsOneWidget);
+      final currentFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
+      expect(tester.widget<TextField>(currentFields.at(0)).controller?.text ?? '', isEmpty);
+      expect(tester.widget<TextField>(currentFields.at(1)).controller?.text ?? '', isEmpty);
+    }
+
+    await enterAndContinue('テスト豆腐', '1');
+    await enterAndContinue('テスト卵', '2');
+    await enterAndContinue('テスト牛乳', '3');
+
+    final repository = WeeklyShoppingRepository(database);
+    final savedWeek = await repository.loadWeek(_nextWeekStart());
+    final morningItems = savedWeek.weekdaySections
+        .firstWhere((section) => section.section == ShoppingSection.morning)
+        .items;
+
+    expect(morningItems.any((item) => item.name == 'テスト豆腐'), isTrue);
+    expect(morningItems.any((item) => item.name == 'テスト卵'), isTrue);
+    expect(morningItems.any((item) => item.name == 'テスト牛乳'), isTrue);
+    expect(find.text('次も登録'), findsOneWidget);
+    expect(find.text('保存して続けて入力できます'), findsOneWidget);
+  });
+
+  testWidgets('shows the continue-add button beside the item-name and quantity controls', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品を追加'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('次も登録'), findsOneWidget);
+    expect(find.text('保存して続けて入力できます'), findsOneWidget);
+
+    final continueButton = tester.widget<FilledButton>(find.widgetWithText(FilledButton, '次も登録'));
+    expect(continueButton.onPressed, isNotNull);
+  });
+
   testWidgets(
     'switches destinations without losing the active week selection',
     (WidgetTester tester) async {
