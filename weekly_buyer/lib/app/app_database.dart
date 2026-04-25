@@ -114,146 +114,186 @@ class RecipeGroups extends Table {
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  static const Map<String, List<String>> _initialCatalog = {
-    '野菜': [
-      'キャベツ',
-      'レタス',
-      'トマト',
-      'きゅうり',
-      'にんじん',
-      '玉ねぎ',
-      'じゃがいも',
-      'ほうれん草',
-      'ブロッコリー',
-      'ピーマン',
-      'なす',
-      '大根',
-      '白菜',
-      'かぼちゃ',
-      'アスパラガス',
-      'しいたけ',
-      'しめじ',
-      'えのき',
-      'まいたけ',
-      'エリンギ',
-      'パプリカ',
-      'ズッキーニ',
-    ],
-    '果物': [
-      'りんご',
-      'バナナ',
-      'みかん',
-      'いちご',
-      'ぶどう',
-      'キウイ',
-      'パイナップル',
-      '桃',
-      '梨',
-      'さくらんぼ',
-    ],
-    '肉': [
-      '牛肉',
-      '豚肉',
-      '鶏むね肉',
-      '鶏もも肉',
-      'ひき肉',
-      'ベーコン',
-      'ハム',
-      'ソーセージ',
-      'ラム肉',
-      '合いびき肉',
-      '鶏ひき',
-    ],
-    '魚介': [
-      '鮭',
-      'サバ',
-      'マグロ',
-      'イワシ',
-      'アジ',
-      'エビ',
-      'カニ',
-      'ホタテ',
-      'イカ',
-      'タコ',
-    ],
-    '乳製品': [
-      '牛乳',
-      'ヨーグルト',
-      'チーズ',
-      'バター',
-      '生クリーム',
-      'カッテージチーズ',
-      'アイスクリーム',
-      '飲むヨーグルト',
-    ],
-    '穀類・主食': [
-      '白米',
-      '玄米',
-      '食パン',
-      'うどん',
-      'そば',
-      'パスタ',
-      'シリアル',
-      'オートミール',
-    ],
-    '飲料': [
-      '水',
-      '緑茶',
-      'ウーロン茶',
-      'コーヒー',
-      '紅茶',
-      'オレンジジュース',
-      'コーラ',
-      'スポーツドリンク',
-    ],
-    'お菓子': [
-      'ポテトチップス',
-      'チョコレート',
-      'クッキー',
-      'ビスケット',
-      'キャンディ',
-      'ガム',
-      'せんべい',
-      'プリン',
-    ],
-    '冷凍食品': [
-      '冷凍餃子',
-      '冷凍チャーハン',
-      '冷凍うどん',
-      '冷凍ピザ',
-      '冷凍コロッケ',
-      '冷凍からあげ',
-      '冷凍野菜ミックス',
-    ],
-    '調味料': [
-      '醤油',
-      '味噌',
-      '砂糖',
-      '塩',
-      '酢',
-      'マヨネーズ',
-      'オイスターソース',
-      '油',
-      'ごま油',
-    ],
-    'ベーカリー': [
-      'クロワッサン',
-      'ロールパン',
-      'フランスパン',
-      'デニッシュ',
-      'あんパン',
-      'メロンパン',
-      'カレーパン',
-      '食パン（全粒粉）',
-      'ベーグル',
-      'マフィン',
-    ],
-    '大豆製品・発酵食品': [
-      '豆腐',
-      '納豆',
-      'キムチ',
-    ],
-  };
+  static const List<_InitialCategorySeed> _initialCatalog = [
+    _InitialCategorySeed(
+      name: '野菜',
+      items: [
+        _InitialItemSeed(name: 'キャベツ', hiragana: 'きゃべつ'),
+        _InitialItemSeed(name: 'レタス', hiragana: 'れたす'),
+        _InitialItemSeed(name: 'トマト', hiragana: 'とまと'),
+        _InitialItemSeed(name: 'きゅうり', hiragana: 'きゅうり'),
+        _InitialItemSeed(name: 'にんじん', hiragana: 'にんじん'),
+        _InitialItemSeed(name: '玉ねぎ', hiragana: 'たまねぎ'),
+        _InitialItemSeed(name: 'じゃがいも', hiragana: 'じゃがいも'),
+        _InitialItemSeed(name: 'ほうれん草', hiragana: 'ほうれんそう'),
+        _InitialItemSeed(name: 'ブロッコリー', hiragana: 'ぶろっこりー'),
+        _InitialItemSeed(name: 'ピーマン', hiragana: 'ぴーまん'),
+        _InitialItemSeed(name: 'なす', hiragana: 'なす'),
+        _InitialItemSeed(name: '大根', hiragana: 'だいこん'),
+        _InitialItemSeed(name: '白菜', hiragana: 'はくさい'),
+        _InitialItemSeed(name: 'かぼちゃ', hiragana: 'かぼちゃ'),
+        _InitialItemSeed(name: 'アスパラガス', hiragana: 'あすぱらがす'),
+        _InitialItemSeed(name: 'しいたけ', hiragana: 'しいたけ'),
+        _InitialItemSeed(name: 'しめじ', hiragana: 'しめじ'),
+        _InitialItemSeed(name: 'えのき', hiragana: 'えのき'),
+        _InitialItemSeed(name: 'まいたけ', hiragana: 'まいたけ'),
+        _InitialItemSeed(name: 'エリンギ', hiragana: 'えりんぎ'),
+        _InitialItemSeed(name: 'パプリカ', hiragana: 'ぱぷりか'),
+        _InitialItemSeed(name: 'ズッキーニ', hiragana: 'ずっきーに'),
+        _InitialItemSeed(name: '豆苗', hiragana: 'とうみょう'),
+        _InitialItemSeed(name: '水菜', hiragana: 'みずな'),
+        _InitialItemSeed(name: 'プチトマト', hiragana: 'ぷちとまと'),
+      ],
+    ),
+    _InitialCategorySeed(
+      name: '果物',
+      items: [
+        _InitialItemSeed(name: 'りんご', hiragana: 'りんご'),
+        _InitialItemSeed(name: 'バナナ', hiragana: 'ばなな'),
+        _InitialItemSeed(name: 'みかん', hiragana: 'みかん'),
+        _InitialItemSeed(name: 'いちご', hiragana: 'いちご'),
+        _InitialItemSeed(name: 'ぶどう', hiragana: 'ぶどう'),
+        _InitialItemSeed(name: 'キウイ', hiragana: 'きうい'),
+        _InitialItemSeed(name: 'パイナップル', hiragana: 'ぱいなっぷる'),
+        _InitialItemSeed(name: '桃', hiragana: 'もも'),
+        _InitialItemSeed(name: '梨', hiragana: 'なし'),
+        _InitialItemSeed(name: 'さくらんぼ', hiragana: 'さくらんぼ'),
+      ],
+    ),
+    _InitialCategorySeed(
+      name: '肉',
+      items: [
+        _InitialItemSeed(name: '牛肉', hiragana: 'ぎゅうにく'),
+        _InitialItemSeed(name: '豚肉', hiragana: 'ぶたにく'),
+        _InitialItemSeed(name: '鶏むね肉', hiragana: 'とりむねにく'),
+        _InitialItemSeed(name: '鶏もも肉', hiragana: 'とりももにく'),
+        _InitialItemSeed(name: 'ひき肉', hiragana: 'ひきにく'),
+        _InitialItemSeed(name: 'ベーコン', hiragana: 'べーこん'),
+        _InitialItemSeed(name: 'ハム', hiragana: 'はむ'),
+        _InitialItemSeed(name: 'ソーセージ', hiragana: 'そーせーじ'),
+        _InitialItemSeed(name: 'ラム肉', hiragana: 'らむにく'),
+        _InitialItemSeed(name: '合いびき肉', hiragana: 'あいびきにく'),
+        _InitialItemSeed(name: '鶏ひき', hiragana: 'とりひき'),
+      ],
+    ),
+    _InitialCategorySeed(
+      name: '魚介',
+      items: [
+        _InitialItemSeed(name: '鮭', hiragana: 'さけ'),
+        _InitialItemSeed(name: 'サバ', hiragana: 'さば'),
+        _InitialItemSeed(name: 'マグロ', hiragana: 'まぐろ'),
+        _InitialItemSeed(name: 'イワシ', hiragana: 'いわし'),
+        _InitialItemSeed(name: 'アジ', hiragana: 'あじ'),
+        _InitialItemSeed(name: 'エビ', hiragana: 'えび'),
+        _InitialItemSeed(name: 'カニ', hiragana: 'かに'),
+        _InitialItemSeed(name: 'ホタテ', hiragana: 'ほたて'),
+        _InitialItemSeed(name: 'イカ', hiragana: 'いか'),
+        _InitialItemSeed(name: 'タコ', hiragana: 'たこ'),
+      ],
+    ),
+    _InitialCategorySeed(
+      name: '卵・乳製品',
+      items: [
+        _InitialItemSeed(name: '卵', hiragana: 'たまご'),
+        _InitialItemSeed(name: '牛乳', hiragana: 'ぎゅうにゅう'),
+        _InitialItemSeed(name: 'ヨーグルト', hiragana: 'よーぐると'),
+        _InitialItemSeed(name: 'チーズ', hiragana: 'ちーず'),
+        _InitialItemSeed(name: 'バター', hiragana: 'ばたー'),
+        _InitialItemSeed(name: '生クリーム', hiragana: 'なまくりーむ'),
+        _InitialItemSeed(name: 'カッテージチーズ', hiragana: 'かってーじちーず'),
+        _InitialItemSeed(name: 'アイスクリーム', hiragana: 'あいすくりーむ'),
+        _InitialItemSeed(name: '飲むヨーグルト', hiragana: 'のむよーぐると'),
+      ],
+    ),
+    _InitialCategorySeed(
+      name: '穀類・主食',
+      items: [
+        _InitialItemSeed(name: '白米', hiragana: 'はくまい'),
+        _InitialItemSeed(name: '玄米', hiragana: 'げんまい'),
+        _InitialItemSeed(name: '食パン', hiragana: 'しょくぱん'),
+        _InitialItemSeed(name: 'うどん', hiragana: 'うどん'),
+        _InitialItemSeed(name: 'そば', hiragana: 'そば'),
+        _InitialItemSeed(name: 'パスタ', hiragana: 'ぱすた'),
+        _InitialItemSeed(name: 'シリアル', hiragana: 'しりある'),
+        _InitialItemSeed(name: 'オートミール', hiragana: 'おーとみーる'),
+      ],
+    ),
+    _InitialCategorySeed(
+      name: '飲料',
+      items: [
+        _InitialItemSeed(name: '水', hiragana: 'みず'),
+        _InitialItemSeed(name: '緑茶', hiragana: 'りょくちゃ'),
+        _InitialItemSeed(name: 'ウーロン茶', hiragana: 'うーろんちゃ'),
+        _InitialItemSeed(name: 'コーヒー', hiragana: 'こーひー'),
+        _InitialItemSeed(name: '紅茶', hiragana: 'こうちゃ'),
+        _InitialItemSeed(name: 'オレンジジュース', hiragana: 'おれんじじゅーす'),
+        _InitialItemSeed(name: 'コーラ', hiragana: 'こーら'),
+        _InitialItemSeed(name: 'スポーツドリンク', hiragana: 'すぽーつどりんく'),
+      ],
+    ),
+    _InitialCategorySeed(
+      name: 'お菓子',
+      items: [
+        _InitialItemSeed(name: 'ポテトチップス', hiragana: 'ぽてとちっぷす'),
+        _InitialItemSeed(name: 'チョコレート', hiragana: 'ちょこれーと'),
+        _InitialItemSeed(name: 'クッキー', hiragana: 'くっきー'),
+        _InitialItemSeed(name: 'ビスケット', hiragana: 'びすけっと'),
+        _InitialItemSeed(name: 'キャンディ', hiragana: 'きゃんでぃ'),
+        _InitialItemSeed(name: 'ガム', hiragana: 'がむ'),
+        _InitialItemSeed(name: 'せんべい', hiragana: 'せんべい'),
+        _InitialItemSeed(name: 'プリン', hiragana: 'ぷりん'),
+      ],
+    ),
+    _InitialCategorySeed(
+      name: '冷凍食品',
+      items: [
+        _InitialItemSeed(name: '冷凍餃子', hiragana: 'れいとうぎょうざ'),
+        _InitialItemSeed(name: '冷凍チャーハン', hiragana: 'れいとうちゃーはん'),
+        _InitialItemSeed(name: '冷凍うどん', hiragana: 'れいとううどん'),
+        _InitialItemSeed(name: '冷凍ピザ', hiragana: 'れいとうぴざ'),
+        _InitialItemSeed(name: '冷凍コロッケ', hiragana: 'れいとうころっけ'),
+        _InitialItemSeed(name: '冷凍からあげ', hiragana: 'れいとうからあげ'),
+        _InitialItemSeed(name: '冷凍野菜ミックス', hiragana: 'れいとうやさいみっくす'),
+      ],
+    ),
+    _InitialCategorySeed(
+      name: '調味料',
+      items: [
+        _InitialItemSeed(name: '醤油', hiragana: 'しょうゆ'),
+        _InitialItemSeed(name: '味噌', hiragana: 'みそ'),
+        _InitialItemSeed(name: '砂糖', hiragana: 'さとう'),
+        _InitialItemSeed(name: '塩', hiragana: 'しお'),
+        _InitialItemSeed(name: '酢', hiragana: 'す'),
+        _InitialItemSeed(name: 'マヨネーズ', hiragana: 'まよねーず'),
+        _InitialItemSeed(name: 'オイスターソース', hiragana: 'おいすたーそーす'),
+        _InitialItemSeed(name: '油', hiragana: 'あぶら'),
+        _InitialItemSeed(name: 'ごま油', hiragana: 'ごまあぶら'),
+      ],
+    ),
+    _InitialCategorySeed(
+      name: 'ベーカリー',
+      items: [
+        _InitialItemSeed(name: 'クロワッサン', hiragana: 'くろわっさん'),
+        _InitialItemSeed(name: 'ロールパン', hiragana: 'ろーるぱん'),
+        _InitialItemSeed(name: 'フランスパン', hiragana: 'ふらんすぱん'),
+        _InitialItemSeed(name: 'デニッシュ', hiragana: 'でにっしゅ'),
+        _InitialItemSeed(name: 'あんパン', hiragana: 'あんぱん'),
+        _InitialItemSeed(name: 'メロンパン', hiragana: 'めろんぱん'),
+        _InitialItemSeed(name: 'カレーパン', hiragana: 'かれーぱん'),
+        _InitialItemSeed(name: '食パン（全粒粉）', hiragana: 'しょくぱんぜんりゅうふん'),
+        _InitialItemSeed(name: 'ベーグル', hiragana: 'べーぐる'),
+        _InitialItemSeed(name: 'マフィン', hiragana: 'まふぃん'),
+      ],
+    ),
+    _InitialCategorySeed(
+      name: '大豆製品・発酵食品',
+      items: [
+        _InitialItemSeed(name: '豆腐', hiragana: 'とうふ'),
+        _InitialItemSeed(name: '納豆', hiragana: 'なっとう'),
+        _InitialItemSeed(name: 'キムチ', hiragana: 'きむち'),
+      ],
+    ),
+  ];
 
   AppDatabase({QueryExecutor? executor}) : super(executor ?? _openConnection());
 
@@ -298,33 +338,72 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _seedInitialCatalogIfNeeded() async {
-    final hasCategories = await (select(categories)..limit(1)).getSingleOrNull();
-    if (hasCategories != null) {
+    await transaction(() async {
+      for (var categoryIndex = 0; categoryIndex < _initialCatalog.length; categoryIndex++) {
+        final categorySeed = _initialCatalog[categoryIndex];
+        final categoryId = await _ensureSeedCategory(categorySeed, categoryIndex);
+        if (categoryId == null) {
+          continue;
+        }
+
+        for (final itemSeed in categorySeed.items) {
+          await _ensureSeedItem(categoryId, itemSeed);
+        }
+      }
+    });
+  }
+
+  Future<int?> _ensureSeedCategory(
+    _InitialCategorySeed categorySeed,
+    int sortOrder,
+  ) async {
+    final existing = await (select(categories)
+          ..where((table) => table.name.equals(categorySeed.name)))
+        .getSingleOrNull();
+    if (existing != null) {
+      return existing.isActive ? existing.id : null;
+    }
+
+    final inserted = await into(categories).insertReturning(
+      CategoriesCompanion.insert(
+        name: categorySeed.name,
+        sortOrder: Value(sortOrder),
+      ),
+    );
+    return inserted.id;
+  }
+
+  Future<void> _ensureSeedItem(int categoryId, _InitialItemSeed itemSeed) async {
+    final existing = await (select(itemMasters)
+          ..where(
+            (table) =>
+                table.name.equals(itemSeed.name) & table.categoryId.equals(categoryId),
+          ))
+        .getSingleOrNull();
+
+    if (existing != null) {
+      if (existing.isActive &&
+          (existing.hiragana == null || existing.hiragana!.trim().isEmpty) &&
+          existing.hiragana != itemSeed.hiragana) {
+        await (update(itemMasters)
+              ..where((table) => table.id.equals(existing.id)))
+            .write(
+          ItemMastersCompanion(
+            hiragana: Value(itemSeed.hiragana),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
+      }
       return;
     }
 
-    for (final entry in _initialCatalog.entries) {
-      final categoryIndex = _initialCatalog.keys.toList().indexOf(entry.key);
-      final category = await into(categories).insertReturning(
-        CategoriesCompanion.insert(
-          name: entry.key,
-          sortOrder: Value(categoryIndex),
-        ),
-      );
-
-      await batch((batch) {
-        for (final itemName in entry.value) {
-          batch.insert(
-            itemMasters,
-            ItemMastersCompanion.insert(
-              name: itemName,
-              hiragana: const Value(null),
-              categoryId: Value(category.id),
-            ),
-          );
-        }
-      });
-    }
+    await into(itemMasters).insert(
+      ItemMastersCompanion.insert(
+        name: itemSeed.name,
+        hiragana: Value(itemSeed.hiragana),
+        categoryId: Value(categoryId),
+      ),
+    );
   }
 
   static QueryExecutor _openConnection() {
@@ -340,4 +419,24 @@ class AppDatabase extends _$AppDatabase {
       );
     });
   }
+}
+
+class _InitialCategorySeed {
+  const _InitialCategorySeed({
+    required this.name,
+    required this.items,
+  });
+
+  final String name;
+  final List<_InitialItemSeed> items;
+}
+
+class _InitialItemSeed {
+  const _InitialItemSeed({
+    required this.name,
+    required this.hiragana,
+  });
+
+  final String name;
+  final String hiragana;
 }

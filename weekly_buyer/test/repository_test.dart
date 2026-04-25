@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' as drift;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,10 +8,125 @@ import 'package:weekly_buyer/app/app_database.dart';
 import 'package:weekly_buyer/features/weekly_shopping_list/data/weekly_shopping_repository.dart';
 import 'package:weekly_buyer/features/weekly_shopping_list/domain/weekly_shopping_models.dart';
 
+const _seededCategoryNames = [
+  '野菜',
+  '果物',
+  '肉',
+  '魚介',
+  '卵・乳製品',
+  '穀類・主食',
+  '飲料',
+  'お菓子',
+  '冷凍食品',
+  '調味料',
+  'ベーカリー',
+  '大豆製品・発酵食品',
+];
+
+const _seededItemCounts = {
+  '野菜': 25,
+  '果物': 10,
+  '肉': 11,
+  '魚介': 10,
+  '卵・乳製品': 9,
+  '穀類・主食': 8,
+  '飲料': 8,
+  'お菓子': 8,
+  '冷凍食品': 7,
+  '調味料': 9,
+  'ベーカリー': 10,
+  '大豆製品・発酵食品': 3,
+};
+
+Future<AppDatabase> _openSeedDatabase(String path) async {
+  return AppDatabase(executor: NativeDatabase(File(path)));
+}
+
 void main() {
   test('computes next calendar week from the current week start', () {
     expect(startOfNextWeek(DateTime(2026, 4, 22)), DateTime(2026, 4, 27));
     expect(startOfNextWeek(DateTime(2026, 12, 31)), DateTime(2027, 1, 4));
+  });
+
+  test('seeds the initial catalog with the expected categories and item counts', () async {
+    final tempDir = await Directory.systemTemp.createTemp('weekly-buyer-seed-clean');
+    addTearDown(() => tempDir.deleteSync(recursive: true));
+
+    final databasePath = '${tempDir.path}${Platform.pathSeparator}weekly_buyer.db';
+    final database = await _openSeedDatabase(databasePath);
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+
+    final categories = await repository.loadCategories();
+    expect(categories.map((category) => category.name).toList(), _seededCategoryNames);
+
+    final itemMasters = await repository.loadItemMasters();
+    expect(itemMasters.every((item) => item.hiragana != null && item.hiragana!.trim().isNotEmpty), isTrue);
+    expect(
+      {
+        for (final categoryName in _seededCategoryNames)
+          categoryName: itemMasters.where((item) => item.categoryName == categoryName).length,
+      },
+      _seededItemCounts,
+    );
+  });
+
+  test('does not duplicate seeded data when startup runs again on an existing database', () async {
+    final tempDir = await Directory.systemTemp.createTemp('weekly-buyer-seed-repeat');
+    addTearDown(() => tempDir.deleteSync(recursive: true));
+
+    final databasePath = '${tempDir.path}${Platform.pathSeparator}weekly_buyer.db';
+
+    final firstDatabase = await _openSeedDatabase(databasePath);
+    final firstRepository = WeeklyShoppingRepository(firstDatabase);
+    final initialCategories = await firstRepository.loadCategories();
+    final initialItems = await firstRepository.loadItemMasters();
+    await firstDatabase.close();
+
+    final secondDatabase = await _openSeedDatabase(databasePath);
+    addTearDown(secondDatabase.close);
+    final secondRepository = WeeklyShoppingRepository(secondDatabase);
+
+    final categoriesAfterRestart = await secondRepository.loadCategories();
+    final itemsAfterRestart = await secondRepository.loadItemMasters();
+
+    expect(categoriesAfterRestart.map((category) => category.name).toList(), initialCategories.map((category) => category.name).toList());
+    expect(itemsAfterRestart.length, initialItems.length);
+    expect(itemsAfterRestart.map((item) => item.name).toSet(), initialItems.map((item) => item.name).toSet());
+    expect(itemsAfterRestart.map((item) => item.hiragana).toSet(), initialItems.map((item) => item.hiragana).toSet());
+  });
+
+  test('backfills missing hiragana values without duplicating seeded item masters', () async {
+    final tempDir = await Directory.systemTemp.createTemp('weekly-buyer-seed-backfill');
+    addTearDown(() => tempDir.deleteSync(recursive: true));
+
+    final databasePath = '${tempDir.path}${Platform.pathSeparator}weekly_buyer.db';
+
+    final firstDatabase = await _openSeedDatabase(databasePath);
+    final repository = WeeklyShoppingRepository(firstDatabase);
+    final seededItems = await repository.loadItemMasters();
+    final targetItem = seededItems.firstWhere((item) => item.name == '牛乳');
+
+    await (firstDatabase.update(firstDatabase.itemMasters)
+          ..where((table) => table.id.equals(targetItem.id)))
+        .write(
+      ItemMastersCompanion(
+        hiragana: const drift.Value(null),
+        updatedAt: drift.Value(DateTime.now()),
+      ),
+    );
+    await firstDatabase.close();
+
+    final secondDatabase = await _openSeedDatabase(databasePath);
+    addTearDown(secondDatabase.close);
+    final secondRepository = WeeklyShoppingRepository(secondDatabase);
+
+    final reloadedItems = await secondRepository.loadItemMasters();
+    final reloadedTarget = reloadedItems.firstWhere((item) => item.id == targetItem.id);
+
+    expect(reloadedTarget.hiragana, 'ぎゅうにゅう');
+    expect(reloadedItems.where((item) => item.name == '牛乳'), hasLength(1));
   });
 
   test(
