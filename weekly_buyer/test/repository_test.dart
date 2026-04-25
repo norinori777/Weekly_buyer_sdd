@@ -629,7 +629,11 @@ void main() {
 
     final repository = WeeklyShoppingRepository(database);
     final category = await repository.addCategory('削除対象カテゴリ');
-    await repository.addItemMaster(name: '削除対象商品', categoryId: category.id);
+    await repository.addItemMaster(
+      name: '削除対象商品',
+      hiragana: 'さくじょたいしょうしょうひん',
+      categoryId: category.id,
+    );
 
     expect(
       () => repository.deleteCategory(category.id),
@@ -645,17 +649,20 @@ void main() {
     final category = await repository.addCategory('商品カテゴリ');
     final created = await repository.addItemMaster(
       name: 'テスト商品',
+      hiragana: 'てすとしょうひん',
       categoryId: category.id,
     );
 
     await repository.updateItemMaster(
       itemId: created.id,
       name: '更新商品',
+      hiragana: 'こうしんしょうひん',
       categoryId: category.id,
     );
 
     final itemsAfterUpdate = await repository.loadItemMasters();
     expect(itemsAfterUpdate.any((item) => item.name == '更新商品'), isTrue);
+    expect(itemsAfterUpdate.any((item) => item.hiragana == 'こうしんしょうひん'), isTrue);
 
     await repository.deleteItemMaster(
       created.id,
@@ -674,6 +681,7 @@ void main() {
     final category = await repository.addCategory('商品カテゴリ');
     await repository.addItemMaster(
       name: 'テスト牛乳',
+      hiragana: 'てすとぎゅうにゅう',
       categoryId: category.id,
     );
 
@@ -695,5 +703,26 @@ void main() {
       () => repository.deleteItemMaster(item.id, referenceDate: referenceDate),
       throwsA(isA<ItemInPurchaseWeekException>()),
     );
+  });
+
+  test('saves item master hiragana and searches by name or hiragana', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    final category = await repository.addCategory('検索カテゴリ');
+
+    final created = await repository.addItemMaster(
+      name: '検索牛乳',
+      hiragana: 'けんさくぎゅうにゅう',
+      categoryId: category.id,
+    );
+
+    final loaded = await repository.loadItemMasters();
+    expect(loaded.singleWhere((item) => item.id == created.id).hiragana, 'けんさくぎゅうにゅう');
+
+    expect((await repository.searchCandidates('検索牛乳')).single.id, created.id);
+    expect((await repository.searchCandidates('けんさくぎゅうにゅう')).single.id, created.id);
+    expect(await repository.searchCandidates('けんさくぎゅうにゅう'), hasLength(1));
   });
 }

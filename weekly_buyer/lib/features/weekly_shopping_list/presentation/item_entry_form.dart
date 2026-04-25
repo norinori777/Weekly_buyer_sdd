@@ -523,6 +523,16 @@ class _ItemEntryFormState extends State<ItemEntryForm> {
     _notifyChanged();
   }
 
+  String _candidateSubtitle(ItemCandidate candidate) {
+    final categoryName = candidate.categoryName ?? 'カテゴリ未設定';
+    final hiragana = candidate.hiragana?.trim();
+    if (hiragana == null || hiragana.isEmpty) {
+      return categoryName;
+    }
+
+    return '$categoryName / $hiragana';
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredCandidates = widget.candidates.where((candidate) {
@@ -530,7 +540,8 @@ class _ItemEntryFormState extends State<ItemEntryForm> {
       if (query.isEmpty) {
         return true;
       }
-      return candidate.name.toLowerCase().contains(query);
+      return candidate.name.toLowerCase().contains(query) ||
+          (candidate.hiragana?.toLowerCase().contains(query) ?? false);
     }).toList();
 
     return Column(
@@ -586,7 +597,7 @@ class _ItemEntryFormState extends State<ItemEntryForm> {
                 final candidate = filteredCandidates[index];
                 return ListTile(
                   title: Text(candidate.name),
-                  subtitle: Text(candidate.categoryName ?? 'カテゴリ未設定'),
+                  subtitle: Text(_candidateSubtitle(candidate)),
                   selected: _selectedCandidate?.id == candidate.id,
                   onTap: () => _selectCandidate(candidate),
                 );

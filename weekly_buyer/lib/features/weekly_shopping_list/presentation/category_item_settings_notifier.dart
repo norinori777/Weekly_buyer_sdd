@@ -158,10 +158,15 @@ class CategoryItemSettingsNotifier extends AsyncNotifier<CategoryItemSettingsSta
 
   Future<void> addItem({
     required String name,
+    required String hiragana,
     required int? categoryId,
   }) async {
     await _mutate((repository) async {
-      final created = await repository.addItemMaster(name: name, categoryId: categoryId);
+      final created = await repository.addItemMaster(
+        name: name,
+        hiragana: hiragana,
+        categoryId: categoryId,
+      );
       await _reloadAfterMutation(selectedCategoryId: created.categoryId ?? state.valueOrNull?.selectedCategoryId);
     });
   }
@@ -169,12 +174,14 @@ class CategoryItemSettingsNotifier extends AsyncNotifier<CategoryItemSettingsSta
   Future<void> updateItem(
     ItemCandidate item, {
     required String name,
+    required String hiragana,
     required int? categoryId,
   }) async {
     await _mutate((repository) async {
       await repository.updateItemMaster(
         itemId: item.id,
         name: name,
+        hiragana: hiragana,
         categoryId: categoryId,
       );
       await _reloadAfterMutation(selectedCategoryId: categoryId);

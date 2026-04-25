@@ -205,6 +205,7 @@ class ItemCandidate {
   const ItemCandidate({
     required this.id,
     required this.name,
+    required this.hiragana,
     required this.categoryId,
     required this.categoryName,
     required this.defaultQuantity,
@@ -212,6 +213,7 @@ class ItemCandidate {
 
   final int id;
   final String name;
+  final String? hiragana;
   final int? categoryId;
   final String? categoryName;
   final int defaultQuantity;

@@ -5,10 +5,12 @@ import '../domain/weekly_shopping_models.dart';
 class ItemEditorRequest {
   const ItemEditorRequest({
     required this.name,
+    required this.hiragana,
     required this.categoryId,
   });
 
   final String name;
+  final String hiragana;
   final int? categoryId;
 }
 
@@ -16,6 +18,7 @@ Future<ItemEditorRequest?> showItemEditorSheet({
   required BuildContext context,
   required List<CategoryEntry> categories,
   String initialName = '',
+  String initialHiragana = '',
   int? initialCategoryId,
   String submitLabel = '保存',
 }) {
@@ -34,6 +37,7 @@ Future<ItemEditorRequest?> showItemEditorSheet({
         child: ItemEditorSheet(
           categories: categories,
           initialName: initialName,
+          initialHiragana: initialHiragana,
           initialCategoryId: initialCategoryId,
           submitLabel: submitLabel,
           onCancel: () => Navigator.of(sheetContext).pop(),
@@ -51,12 +55,14 @@ class ItemEditorSheet extends StatefulWidget {
     required this.onSubmit,
     this.onCancel,
     this.initialName = '',
+    this.initialHiragana = '',
     this.initialCategoryId,
     this.submitLabel = '保存',
   });
 
   final List<CategoryEntry> categories;
   final String initialName;
+  final String initialHiragana;
   final int? initialCategoryId;
   final ValueChanged<ItemEditorRequest> onSubmit;
   final VoidCallback? onCancel;
@@ -68,12 +74,14 @@ class ItemEditorSheet extends StatefulWidget {
 
 class _ItemEditorSheetState extends State<ItemEditorSheet> {
   late final TextEditingController _nameController;
+  late final TextEditingController _hiraganaController;
   int? _selectedCategoryId;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName);
+    _hiraganaController = TextEditingController(text: widget.initialHiragana);
     _selectedCategoryId = _resolveInitialCategoryId();
   }
 
@@ -82,6 +90,9 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialName != widget.initialName) {
       _nameController.text = widget.initialName;
+    }
+    if (oldWidget.initialHiragana != widget.initialHiragana) {
+      _hiraganaController.text = widget.initialHiragana;
     }
     if (oldWidget.initialCategoryId != widget.initialCategoryId ||
         oldWidget.categories != widget.categories) {
@@ -92,6 +103,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
   @override
   void dispose() {
     _nameController.dispose();
+    _hiraganaController.dispose();
     super.dispose();
   }
 
@@ -115,6 +127,11 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
         TextField(
           controller: _nameController,
           decoration: const InputDecoration(labelText: '商品名'),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _hiraganaController,
+          decoration: const InputDecoration(labelText: 'ひらがな'),
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<int?>(
@@ -156,10 +173,15 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
                   if (name.isEmpty) {
                     return;
                   }
+                  final hiragana = _hiraganaController.text.trim();
+                  if (hiragana.isEmpty) {
+                    return;
+                  }
 
                   widget.onSubmit(
                     ItemEditorRequest(
                       name: name,
+                      hiragana: hiragana,
                       categoryId: _selectedCategoryId,
                     ),
                   );

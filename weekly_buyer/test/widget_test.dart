@@ -39,12 +39,14 @@ Future<void> _seedWeeklyItem(
       .insert(
         ItemMastersCompanion.insert(
           name: itemName,
+          hiragana: const drift.Value('てすとぎゅうにゅう'),
           categoryId: drift.Value(category.id),
           defaultQuantity: const drift.Value(1),
         ),
       );
 
   final repository = WeeklyShoppingRepository(database);
+  // Keep the repository path aligned with the seeded master data.
   await repository.addItem(
     referenceDate: referenceDate,
     request: AddItemRequest(
@@ -295,6 +297,60 @@ void main() {
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
+  testWidgets('shows candidate items when searching by hiragana and keeps each match unique', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final categoryRow = await database.into(database.categories).insertReturning(
+          CategoriesCompanion.insert(
+            name: '検索カテゴリ',
+            sortOrder: const drift.Value(0),
+          ),
+        );
+    await database.into(database.itemMasters).insert(
+          ItemMastersCompanion.insert(
+            name: '牛乳',
+            hiragana: const drift.Value('ぎゅうにゅう'),
+            categoryId: drift.Value(categoryRow.id),
+            defaultQuantity: const drift.Value(1),
+          ),
+        );
+    await database.into(database.itemMasters).insert(
+          ItemMastersCompanion.insert(
+            name: 'たまご',
+            hiragana: const drift.Value('たまご'),
+            categoryId: drift.Value(categoryRow.id),
+            defaultQuantity: const drift.Value(1),
+          ),
+        );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品を追加'));
+    await tester.pumpAndSettle();
+
+    final bottomSheet = find.byType(BottomSheet);
+    final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
+    await tester.enterText(sheetTextFields.at(0), 'ぎゅう');
+    await tester.pumpAndSettle();
+
+    expect(find.text('牛乳'), findsOneWidget);
+    expect(find.text('たまご'), findsNothing);
+    expect(find.text('牛乳'), findsOneWidget);
+  });
+
   testWidgets('shows weekday-only labels in weekday selector', (
     WidgetTester tester,
   ) async {
@@ -349,8 +405,9 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).last, '夫は夕飯いらない');
-    await tester.ensureVisible(find.text('保存').last);
-    await tester.tap(find.text('保存').last);
+    final saveButton = find.widgetWithText(FilledButton, '保存').last;
+    await tester.ensureVisible(saveButton);
+    await tester.tap(saveButton, warnIfMissed: false);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('購入リスト').last);

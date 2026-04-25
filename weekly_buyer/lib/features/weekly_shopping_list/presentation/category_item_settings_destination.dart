@@ -70,6 +70,7 @@ class CategoryItemSettingsDestination extends ConsumerWidget {
                     submitLabel: '追加',
                     onSubmit: (request) => ref.read(categoryItemSettingsProvider.notifier).addItem(
                           name: request.name,
+                      hiragana: request.hiragana,
                           categoryId: request.categoryId,
                         ),
                   ),
@@ -78,10 +79,12 @@ class CategoryItemSettingsDestination extends ConsumerWidget {
                     state: data,
                     submitLabel: '保存',
                     initialName: item.name,
+                    initialHiragana: item.hiragana ?? '',
                     initialCategoryId: item.categoryId,
                     onSubmit: (request) => ref.read(categoryItemSettingsProvider.notifier).updateItem(
                           item,
                           name: request.name,
+                      hiragana: request.hiragana,
                           categoryId: request.categoryId,
                         ),
                   ),
@@ -127,6 +130,7 @@ class CategoryItemSettingsDestination extends ConsumerWidget {
     required CategoryItemSettingsState state,
     required String submitLabel,
     String initialName = '',
+    String initialHiragana = '',
     int? initialCategoryId,
     required ValueChanged<ItemEditorRequest> onSubmit,
   }) async {
@@ -134,6 +138,7 @@ class CategoryItemSettingsDestination extends ConsumerWidget {
       context: context,
       categories: state.categories,
       initialName: initialName,
+      initialHiragana: initialHiragana,
       initialCategoryId: initialCategoryId ?? state.selectedCategoryId,
       submitLabel: submitLabel,
     );
@@ -338,11 +343,13 @@ class _ItemTab extends StatelessWidget {
 
   String _itemSubtitle(ItemCandidate item) {
     final categoryName = item.categoryName ?? '未分類';
+    final hiragana = item.hiragana?.trim();
+    final hiraganaLabel = hiragana == null || hiragana.isEmpty ? 'ひらがな未設定' : hiragana;
     if (currentWeekItemIds.contains(item.id)) {
-      return '$categoryName / 現在の購入週に含まれているため削除できません';
+      return '$categoryName / $hiraganaLabel / 現在の購入週に含まれているため削除できません';
     }
 
-    return categoryName;
+    return '$categoryName / $hiraganaLabel';
   }
 
   String _deleteTooltip(ItemCandidate item) {

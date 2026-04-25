@@ -16,6 +16,7 @@ class Categories extends Table {
 class ItemMasters extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
+  TextColumn get hiragana => text().nullable()();
   IntColumn get categoryId => integer().nullable().references(
     Categories,
     #id,
@@ -257,7 +258,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? executor}) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -279,6 +280,11 @@ class AppDatabase extends _$AppDatabase {
       if (from < 4) {
         await migrator.createTable(dailyMealMenus);
         await migrator.createTable(mealMenuEntries);
+      }
+      if (from < 5) {
+        if (!await _hasColumn('item_masters', 'hiragana')) {
+          await migrator.addColumn(itemMasters, itemMasters.hiragana);
+        }
       }
     },
     beforeOpen: (details) async {
@@ -312,6 +318,7 @@ class AppDatabase extends _$AppDatabase {
             itemMasters,
             ItemMastersCompanion.insert(
               name: itemName,
+              hiragana: const Value(null),
               categoryId: Value(category.id),
             ),
           );

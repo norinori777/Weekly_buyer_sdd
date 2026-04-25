@@ -424,6 +424,17 @@ class $ItemMastersTable extends ItemMasters
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _hiraganaMeta = const VerificationMeta(
+    'hiragana',
+  );
+  @override
+  late final GeneratedColumn<String> hiragana = GeneratedColumn<String>(
+    'hiragana',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _categoryIdMeta = const VerificationMeta(
     'categoryId',
   );
@@ -493,6 +504,7 @@ class $ItemMastersTable extends ItemMasters
   List<GeneratedColumn> get $columns => [
     id,
     name,
+    hiragana,
     categoryId,
     defaultQuantity,
     isActive,
@@ -521,6 +533,12 @@ class $ItemMastersTable extends ItemMasters
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('hiragana')) {
+      context.handle(
+        _hiraganaMeta,
+        hiragana.isAcceptableOrUnknown(data['hiragana']!, _hiraganaMeta),
+      );
     }
     if (data.containsKey('category_id')) {
       context.handle(
@@ -572,6 +590,10 @@ class $ItemMastersTable extends ItemMasters
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      hiragana: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hiragana'],
+      ),
       categoryId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}category_id'],
@@ -604,6 +626,7 @@ class $ItemMastersTable extends ItemMasters
 class ItemMaster extends DataClass implements Insertable<ItemMaster> {
   final int id;
   final String name;
+  final String? hiragana;
   final int? categoryId;
   final int defaultQuantity;
   final bool isActive;
@@ -612,6 +635,7 @@ class ItemMaster extends DataClass implements Insertable<ItemMaster> {
   const ItemMaster({
     required this.id,
     required this.name,
+    this.hiragana,
     this.categoryId,
     required this.defaultQuantity,
     required this.isActive,
@@ -623,6 +647,9 @@ class ItemMaster extends DataClass implements Insertable<ItemMaster> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || hiragana != null) {
+      map['hiragana'] = Variable<String>(hiragana);
+    }
     if (!nullToAbsent || categoryId != null) {
       map['category_id'] = Variable<int>(categoryId);
     }
@@ -637,6 +664,9 @@ class ItemMaster extends DataClass implements Insertable<ItemMaster> {
     return ItemMastersCompanion(
       id: Value(id),
       name: Value(name),
+      hiragana: hiragana == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hiragana),
       categoryId: categoryId == null && nullToAbsent
           ? const Value.absent()
           : Value(categoryId),
@@ -655,6 +685,7 @@ class ItemMaster extends DataClass implements Insertable<ItemMaster> {
     return ItemMaster(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      hiragana: serializer.fromJson<String?>(json['hiragana']),
       categoryId: serializer.fromJson<int?>(json['categoryId']),
       defaultQuantity: serializer.fromJson<int>(json['defaultQuantity']),
       isActive: serializer.fromJson<bool>(json['isActive']),
@@ -668,6 +699,7 @@ class ItemMaster extends DataClass implements Insertable<ItemMaster> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
+      'hiragana': serializer.toJson<String?>(hiragana),
       'categoryId': serializer.toJson<int?>(categoryId),
       'defaultQuantity': serializer.toJson<int>(defaultQuantity),
       'isActive': serializer.toJson<bool>(isActive),
@@ -679,6 +711,7 @@ class ItemMaster extends DataClass implements Insertable<ItemMaster> {
   ItemMaster copyWith({
     int? id,
     String? name,
+    Value<String?> hiragana = const Value.absent(),
     Value<int?> categoryId = const Value.absent(),
     int? defaultQuantity,
     bool? isActive,
@@ -687,6 +720,7 @@ class ItemMaster extends DataClass implements Insertable<ItemMaster> {
   }) => ItemMaster(
     id: id ?? this.id,
     name: name ?? this.name,
+    hiragana: hiragana.present ? hiragana.value : this.hiragana,
     categoryId: categoryId.present ? categoryId.value : this.categoryId,
     defaultQuantity: defaultQuantity ?? this.defaultQuantity,
     isActive: isActive ?? this.isActive,
@@ -697,6 +731,7 @@ class ItemMaster extends DataClass implements Insertable<ItemMaster> {
     return ItemMaster(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      hiragana: data.hiragana.present ? data.hiragana.value : this.hiragana,
       categoryId: data.categoryId.present
           ? data.categoryId.value
           : this.categoryId,
@@ -714,6 +749,7 @@ class ItemMaster extends DataClass implements Insertable<ItemMaster> {
     return (StringBuffer('ItemMaster(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('hiragana: $hiragana, ')
           ..write('categoryId: $categoryId, ')
           ..write('defaultQuantity: $defaultQuantity, ')
           ..write('isActive: $isActive, ')
@@ -727,6 +763,7 @@ class ItemMaster extends DataClass implements Insertable<ItemMaster> {
   int get hashCode => Object.hash(
     id,
     name,
+    hiragana,
     categoryId,
     defaultQuantity,
     isActive,
@@ -739,6 +776,7 @@ class ItemMaster extends DataClass implements Insertable<ItemMaster> {
       (other is ItemMaster &&
           other.id == this.id &&
           other.name == this.name &&
+          other.hiragana == this.hiragana &&
           other.categoryId == this.categoryId &&
           other.defaultQuantity == this.defaultQuantity &&
           other.isActive == this.isActive &&
@@ -749,6 +787,7 @@ class ItemMaster extends DataClass implements Insertable<ItemMaster> {
 class ItemMastersCompanion extends UpdateCompanion<ItemMaster> {
   final Value<int> id;
   final Value<String> name;
+  final Value<String?> hiragana;
   final Value<int?> categoryId;
   final Value<int> defaultQuantity;
   final Value<bool> isActive;
@@ -757,6 +796,7 @@ class ItemMastersCompanion extends UpdateCompanion<ItemMaster> {
   const ItemMastersCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.hiragana = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.defaultQuantity = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -766,6 +806,7 @@ class ItemMastersCompanion extends UpdateCompanion<ItemMaster> {
   ItemMastersCompanion.insert({
     this.id = const Value.absent(),
     required String name,
+    this.hiragana = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.defaultQuantity = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -775,6 +816,7 @@ class ItemMastersCompanion extends UpdateCompanion<ItemMaster> {
   static Insertable<ItemMaster> custom({
     Expression<int>? id,
     Expression<String>? name,
+    Expression<String>? hiragana,
     Expression<int>? categoryId,
     Expression<int>? defaultQuantity,
     Expression<bool>? isActive,
@@ -784,6 +826,7 @@ class ItemMastersCompanion extends UpdateCompanion<ItemMaster> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (hiragana != null) 'hiragana': hiragana,
       if (categoryId != null) 'category_id': categoryId,
       if (defaultQuantity != null) 'default_quantity': defaultQuantity,
       if (isActive != null) 'is_active': isActive,
@@ -795,6 +838,7 @@ class ItemMastersCompanion extends UpdateCompanion<ItemMaster> {
   ItemMastersCompanion copyWith({
     Value<int>? id,
     Value<String>? name,
+    Value<String?>? hiragana,
     Value<int?>? categoryId,
     Value<int>? defaultQuantity,
     Value<bool>? isActive,
@@ -804,6 +848,7 @@ class ItemMastersCompanion extends UpdateCompanion<ItemMaster> {
     return ItemMastersCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      hiragana: hiragana ?? this.hiragana,
       categoryId: categoryId ?? this.categoryId,
       defaultQuantity: defaultQuantity ?? this.defaultQuantity,
       isActive: isActive ?? this.isActive,
@@ -820,6 +865,9 @@ class ItemMastersCompanion extends UpdateCompanion<ItemMaster> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (hiragana.present) {
+      map['hiragana'] = Variable<String>(hiragana.value);
     }
     if (categoryId.present) {
       map['category_id'] = Variable<int>(categoryId.value);
@@ -844,6 +892,7 @@ class ItemMastersCompanion extends UpdateCompanion<ItemMaster> {
     return (StringBuffer('ItemMastersCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('hiragana: $hiragana, ')
           ..write('categoryId: $categoryId, ')
           ..write('defaultQuantity: $defaultQuantity, ')
           ..write('isActive: $isActive, ')
@@ -4079,6 +4128,7 @@ typedef $$ItemMastersTableCreateCompanionBuilder =
     ItemMastersCompanion Function({
       Value<int> id,
       required String name,
+      Value<String?> hiragana,
       Value<int?> categoryId,
       Value<int> defaultQuantity,
       Value<bool> isActive,
@@ -4089,6 +4139,7 @@ typedef $$ItemMastersTableUpdateCompanionBuilder =
     ItemMastersCompanion Function({
       Value<int> id,
       Value<String> name,
+      Value<String?> hiragana,
       Value<int?> categoryId,
       Value<int> defaultQuantity,
       Value<bool> isActive,
@@ -4159,6 +4210,11 @@ class $$ItemMastersTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hiragana => $composableBuilder(
+    column: $table.hiragana,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4250,6 +4306,11 @@ class $$ItemMastersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get hiragana => $composableBuilder(
+    column: $table.hiragana,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get defaultQuantity => $composableBuilder(
     column: $table.defaultQuantity,
     builder: (column) => ColumnOrderings(column),
@@ -4308,6 +4369,9 @@ class $$ItemMastersTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get hiragana =>
+      $composableBuilder(column: $table.hiragana, builder: (column) => column);
 
   GeneratedColumn<int> get defaultQuantity => $composableBuilder(
     column: $table.defaultQuantity,
@@ -4402,6 +4466,7 @@ class $$ItemMastersTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String?> hiragana = const Value.absent(),
                 Value<int?> categoryId = const Value.absent(),
                 Value<int> defaultQuantity = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
@@ -4410,6 +4475,7 @@ class $$ItemMastersTableTableManager
               }) => ItemMastersCompanion(
                 id: id,
                 name: name,
+                hiragana: hiragana,
                 categoryId: categoryId,
                 defaultQuantity: defaultQuantity,
                 isActive: isActive,
@@ -4420,6 +4486,7 @@ class $$ItemMastersTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String name,
+                Value<String?> hiragana = const Value.absent(),
                 Value<int?> categoryId = const Value.absent(),
                 Value<int> defaultQuantity = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
@@ -4428,6 +4495,7 @@ class $$ItemMastersTableTableManager
               }) => ItemMastersCompanion.insert(
                 id: id,
                 name: name,
+                hiragana: hiragana,
                 categoryId: categoryId,
                 defaultQuantity: defaultQuantity,
                 isActive: isActive,

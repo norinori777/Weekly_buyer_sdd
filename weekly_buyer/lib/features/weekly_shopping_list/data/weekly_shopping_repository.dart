@@ -278,17 +278,23 @@ class WeeklyShoppingRepository {
 
   Future<ItemCandidate> addItemMaster({
     required String name,
+    required String hiragana,
     int? categoryId,
   }) async {
     final normalizedName = name.trim();
     if (normalizedName.isEmpty) {
       throw ArgumentError.value(name, 'name', '商品名は必須です');
     }
+    final normalizedHiragana = hiragana.trim();
+    if (normalizedHiragana.isEmpty) {
+      throw ArgumentError.value(hiragana, 'hiragana', 'ひらがなは必須です');
+    }
 
     return _database.transaction(() async {
       final inserted = await _database.into(_database.itemMasters).insertReturning(
             ItemMastersCompanion.insert(
               name: normalizedName,
+              hiragana: Value(normalizedHiragana),
               categoryId: Value(categoryId),
               defaultQuantity: const Value(1),
             ),
@@ -297,6 +303,7 @@ class WeeklyShoppingRepository {
       return ItemCandidate(
         id: inserted.id,
         name: inserted.name,
+        hiragana: inserted.hiragana,
         categoryId: inserted.categoryId,
         categoryName: inserted.categoryId == null
             ? null
@@ -309,11 +316,16 @@ class WeeklyShoppingRepository {
   Future<void> updateItemMaster({
     required int itemId,
     required String name,
+    required String hiragana,
     int? categoryId,
   }) async {
     final normalizedName = name.trim();
     if (normalizedName.isEmpty) {
       throw ArgumentError.value(name, 'name', '商品名は必須です');
+    }
+    final normalizedHiragana = hiragana.trim();
+    if (normalizedHiragana.isEmpty) {
+      throw ArgumentError.value(hiragana, 'hiragana', 'ひらがなは必須です');
     }
 
     await _database.transaction(() async {
@@ -322,6 +334,7 @@ class WeeklyShoppingRepository {
       )..where((table) => table.id.equals(itemId))).write(
         ItemMastersCompanion(
           name: Value(normalizedName),
+          hiragana: Value(normalizedHiragana),
           categoryId: Value(categoryId),
           updatedAt: Value(DateTime.now()),
         ),
@@ -505,6 +518,7 @@ class WeeklyShoppingRepository {
           .insert(
             ItemMastersCompanion.insert(
               name: normalizedName,
+              hiragana: const Value(null),
               categoryId: Value(categoryId),
               defaultQuantity: Value(request.quantity),
             ),
@@ -644,9 +658,16 @@ class WeeklyShoppingRepository {
       return allCandidates;
     }
 
-    return allCandidates
-        .where((candidate) => candidate.name.toLowerCase().contains(normalized))
-        .toList();
+    final matched = <int, ItemCandidate>{};
+    for (final candidate in allCandidates) {
+      final matchesName = candidate.name.toLowerCase().contains(normalized);
+      final matchesHiragana = candidate.hiragana?.toLowerCase().contains(normalized) ?? false;
+      if (matchesName || matchesHiragana) {
+        matched[candidate.id] = candidate;
+      }
+    }
+
+    return matched.values.toList();
   }
 
   Future<WeeklyList> _ensureWeeklyList(
@@ -706,6 +727,7 @@ class WeeklyShoppingRepository {
           (row) => ItemCandidate(
             id: row.id,
             name: row.name,
+            hiragana: row.hiragana,
             categoryId: row.categoryId,
             categoryName: row.categoryId == null
                 ? null
@@ -910,7 +932,8 @@ class WeeklyShoppingRepository {
   Future<ItemCandidate?> _findCandidateByName(String name) async {
     final candidates = await _loadItemMasters();
     for (final candidate in candidates) {
-      if (candidate.name.toLowerCase() == name.toLowerCase()) {
+      if (candidate.name.toLowerCase() == name.toLowerCase() ||
+          candidate.hiragana?.toLowerCase() == name.toLowerCase()) {
         return candidate;
       }
     }

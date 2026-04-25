@@ -34,7 +34,11 @@ Future<void> _seedCategoryWithReference(
         ),
       );
   final repository = WeeklyShoppingRepository(database);
-  await repository.addItemMaster(name: itemName, categoryId: categoryRow.id);
+  await repository.addItemMaster(
+    name: itemName,
+    hiragana: 'てすとぎゅうにゅう',
+    categoryId: categoryRow.id,
+  );
   await repository.addItem(
     referenceDate: _nextWeekStart(),
     request: AddItemRequest(
@@ -81,7 +85,53 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('商品名'), findsOneWidget);
+    expect(find.text('ひらがな'), findsOneWidget);
     expect(find.text('数量'), findsNothing);
+  });
+
+  testWidgets('preserves item hiragana when editing an existing item', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final categoryRow = await database.into(database.categories).insertReturning(
+          CategoriesCompanion.insert(
+            name: '編集カテゴリ',
+            sortOrder: const drift.Value(0),
+          ),
+        );
+    final repository = WeeklyShoppingRepository(database);
+    await repository.addItemMaster(
+      name: '編集商品',
+      hiragana: 'へんしゅうしょうひん',
+      categoryId: categoryRow.id,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await _openCategoryItemSettings(tester);
+
+    await tester.tap(find.widgetWithText(Tab, '商品'));
+    await tester.pumpAndSettle();
+
+    final itemCard = find.ancestor(
+      of: find.text('編集商品'),
+      matching: find.byType(Card),
+    );
+    await tester.tap(find.descendant(of: itemCard, matching: find.byIcon(Icons.edit_outlined)));
+    await tester.pumpAndSettle();
+
+    final fields = tester.widgetList<TextField>(find.byType(TextField)).toList();
+    expect(fields.length, greaterThanOrEqualTo(2));
+    expect(fields[0].controller?.text, '編集商品');
+    expect(fields[1].controller?.text, 'へんしゅうしょうひん');
   });
 
   testWidgets('disables delete actions when items exist or are used in the current week', (
