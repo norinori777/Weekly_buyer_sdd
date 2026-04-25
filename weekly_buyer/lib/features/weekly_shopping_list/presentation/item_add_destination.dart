@@ -101,6 +101,15 @@ class ItemAddDestination extends ConsumerWidget {
                           section: mealSection,
                         );
                       },
+                      onDeleteMealMenuEntry: (entry) async {
+                        if (isReadOnly) {
+                          return;
+                        }
+                        await ref
+                            .read(weeklyShoppingRepositoryProvider)
+                            .deleteMealMenuEntry(entry.id);
+                        ref.invalidate(mealMenuSnapshotProvider(selectedDate));
+                      },
                       items: data.weekdaySections
                           .firstWhere((entry) => entry.section == section)
                           .items,
@@ -257,6 +266,7 @@ class _SectionPreviewCard extends StatelessWidget {
     required this.isReadOnly,
     required this.onDeleteItem,
     required this.onAddMealMenuEntry,
+    required this.onDeleteMealMenuEntry,
   });
 
   final ShoppingSection section;
@@ -265,6 +275,7 @@ class _SectionPreviewCard extends StatelessWidget {
   final bool isReadOnly;
   final Future<void> Function(ShoppingItemEntry item) onDeleteItem;
   final Future<void> Function(MealSection section) onAddMealMenuEntry;
+  final Future<void> Function(MealMenuEntry entry) onDeleteMealMenuEntry;
 
   @override
   Widget build(BuildContext context) {
@@ -343,10 +354,20 @@ class _SectionPreviewCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const Text('・'),
                       Expanded(child: Text(entry.menuText)),
+                      IconButton(
+                        tooltip: '削除',
+                        onPressed: isReadOnly
+                            ? null
+                            : () => onDeleteMealMenuEntry(entry),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                      ),
                     ],
                   ),
                 ),

@@ -405,10 +405,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).last, '夫は夕飯いらない');
-    final saveButton = find.widgetWithText(FilledButton, '保存').last;
-    await tester.ensureVisible(saveButton);
-    await tester.tap(saveButton, warnIfMissed: false);
     await tester.pumpAndSettle();
+
+  expect(find.text('クリア'), findsNothing);
+  expect(find.text('保存'), findsNothing);
 
     await tester.tap(find.text('購入リスト').last);
     await tester.pumpAndSettle();
