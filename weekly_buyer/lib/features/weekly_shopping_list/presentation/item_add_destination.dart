@@ -185,6 +185,12 @@ class ItemAddDestination extends ConsumerWidget {
               onChanged: (nextDraft) {
                 ref.read(itemAddDraftProvider.notifier).state = nextDraft;
               },
+              onContinueAdd: (request) async {
+                await ref
+                    .read(weeklyShoppingRepositoryProvider)
+                    .addItem(referenceDate: selectedDate, request: request);
+                ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
+              },
               onCancel: () => Navigator.of(sheetContext).pop(),
               onSubmit: (request) => Navigator.of(sheetContext).pop(request),
             ),

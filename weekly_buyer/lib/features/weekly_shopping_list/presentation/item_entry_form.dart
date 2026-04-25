@@ -10,6 +10,7 @@ class ItemEntryForm extends StatefulWidget {
     required this.candidates,
     required this.initialValue,
     required this.onSubmit,
+    this.onContinueAdd,
     this.onChanged,
     this.onCancel,
     this.submitLabel = '追加',
@@ -22,6 +23,7 @@ class ItemEntryForm extends StatefulWidget {
   final ItemAddDraft initialValue;
   final ValueChanged<ItemAddDraft>? onChanged;
   final ValueChanged<AddItemRequest> onSubmit;
+  final Future<void> Function(AddItemRequest request)? onContinueAdd;
   final VoidCallback? onCancel;
   final String submitLabel;
   final bool showCancelButton;
@@ -454,6 +456,7 @@ class _ItemEntryFormState extends State<ItemEntryForm> {
   late final TextEditingController _quantityController;
   late ShoppingSection _selectedSection;
   ItemCandidate? _selectedCandidate;
+  bool _isContinuingAdd = false;
 
   @override
   void initState() {
@@ -514,6 +517,70 @@ class _ItemEntryFormState extends State<ItemEntryForm> {
     );
   }
 
+  AddItemRequest? _currentRequest() {
+    final draft = _currentDraft();
+    final name = draft.name.trim();
+    if (name.isEmpty) {
+      return null;
+    }
+
+    final quantity = int.tryParse(draft.quantityText.trim()) ?? 1;
+    return AddItemRequest(
+      name: name,
+      quantity: quantity,
+      section: draft.section,
+      itemMasterId: draft.selectedCandidateId,
+      categoryId: draft.categoryId,
+    );
+  }
+
+  void _clearEntryFields() {
+    setState(() {
+      _nameController.clear();
+      _quantityController.clear();
+      _selectedCandidate = null;
+    });
+    _notifyChanged();
+  }
+
+  Future<void> _handleContinueAdd() async {
+    if (_isContinuingAdd) {
+      return;
+    }
+
+    final continueAdd = widget.onContinueAdd;
+    final request = _currentRequest();
+    if (continueAdd == null || request == null) {
+      return;
+    }
+
+    setState(() {
+      _isContinuingAdd = true;
+    });
+    try {
+      await continueAdd(request);
+      if (!mounted) {
+        return;
+      }
+      _clearEntryFields();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isContinuingAdd = false;
+        });
+      }
+    }
+  }
+
+  void _handleSubmit() {
+    final request = _currentRequest();
+    if (request == null) {
+      return;
+    }
+
+    widget.onSubmit(request);
+  }
+
   void _selectCandidate(ItemCandidate candidate) {
     setState(() {
       _selectedCandidate = candidate;
@@ -550,22 +617,60 @@ class _ItemEntryFormState extends State<ItemEntryForm> {
       children: [
         Text('商品を追加', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
-        TextField(
-          controller: _nameController,
-          decoration: const InputDecoration(labelText: '商品名'),
-          onChanged: (_) {
-            setState(() {
-              _selectedCandidate = null;
-            });
-            _notifyChanged();
-          },
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _quantityController,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: '数量'),
-          onChanged: (_) => _notifyChanged(),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 3,
+              child: TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: '商品名'),
+                onChanged: (_) {
+                  setState(() {
+                    _selectedCandidate = null;
+                  });
+                  _notifyChanged();
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 2,
+              child: TextField(
+                controller: _quantityController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: '数量'),
+                onChanged: (_) => _notifyChanged(),
+              ),
+            ),
+            if (widget.onContinueAdd != null) ...[
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 124,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      FilledButton(
+                        onPressed: _isContinuingAdd ? null : _handleContinueAdd,
+                        child: Text(_isContinuingAdd ? '登録中...' : '次も登録'),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '保存して続けて入力できます',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 16),
         Wrap(
@@ -621,23 +726,7 @@ class _ItemEntryFormState extends State<ItemEntryForm> {
             ],
             Expanded(
               child: FilledButton(
-                onPressed: () {
-                  final draft = _currentDraft();
-                  final name = draft.name.trim();
-                  if (name.isEmpty) {
-                    return;
-                  }
-                  final quantity = int.tryParse(draft.quantityText.trim()) ?? 1;
-                  widget.onSubmit(
-                    AddItemRequest(
-                      name: name,
-                      quantity: quantity,
-                      section: draft.section,
-                      itemMasterId: draft.selectedCandidateId,
-                      categoryId: draft.categoryId,
-                    ),
-                  );
-                },
+                onPressed: _isContinuingAdd ? null : _handleSubmit,
                 child: Text(widget.submitLabel),
               ),
             ),
