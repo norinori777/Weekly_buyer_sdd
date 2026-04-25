@@ -11,6 +11,18 @@ import 'package:weekly_buyer/features/weekly_shopping_list/data/weekly_shopping_
 import 'package:weekly_buyer/features/weekly_shopping_list/domain/weekly_shopping_models.dart';
 import 'package:weekly_buyer/app/widgets/weekly_buyer_brand_icon.dart';
 import 'package:weekly_buyer/features/weekly_shopping_list/presentation/week_header.dart';
+import 'package:weekly_buyer/features/weekly_shopping_list/presentation/product_name_voice_input_service.dart';
+
+class FakeProductNameVoiceInputService implements ProductNameVoiceInputService {
+  FakeProductNameVoiceInputService(this.response);
+
+  final String? response;
+
+  @override
+  Future<String?> listen(BuildContext context) async {
+    return response;
+  }
+}
 
 Future<void> _seedWeeklyItem(
   AppDatabase database, {
@@ -595,6 +607,136 @@ void main() {
           .firstWhere((section) => section.section == ShoppingSection.morning)
           .items
           .any((item) => item.name == 'テスト豆腐'),
+      isTrue,
+    );
+  });
+
+  testWidgets('fills the product-name field from voice input and keeps it editable', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          productNameVoiceInputServiceProvider.overrideWithValue(
+            FakeProductNameVoiceInputService('音声りんご'),
+          ),
+        ],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品を追加'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('商品名を音声入力'));
+    await tester.pumpAndSettle();
+
+    final bottomSheet = find.byType(BottomSheet);
+    final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
+    final nameField = sheetTextFields.at(0);
+
+    expect(tester.widget<TextField>(nameField).controller?.text ?? '', '音声りんご');
+
+    await tester.enterText(nameField, '音声りんご（修正）');
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(nameField).controller?.text ?? '', '音声りんご（修正）');
+  });
+
+  testWidgets('keeps manual product-name text when voice input is canceled', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          productNameVoiceInputServiceProvider.overrideWithValue(
+            FakeProductNameVoiceInputService(null),
+          ),
+        ],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品を追加'));
+    await tester.pumpAndSettle();
+
+    final bottomSheet = find.byType(BottomSheet);
+    final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
+    final nameField = sheetTextFields.at(0);
+
+    await tester.enterText(nameField, '手入力途中');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('商品名を音声入力'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(nameField).controller?.text ?? '', '手入力途中');
+  });
+
+  testWidgets('falls back to manual typing when voice input is unavailable', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          productNameVoiceInputServiceProvider.overrideWithValue(
+            FakeProductNameVoiceInputService(null),
+          ),
+        ],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品を追加'));
+    await tester.pumpAndSettle();
+
+    final bottomSheet = find.byType(BottomSheet);
+    final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
+    final nameField = sheetTextFields.at(0);
+    final quantityField = sheetTextFields.at(1);
+
+    await tester.tap(find.byTooltip('商品名を音声入力'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(nameField, '手入力りんご');
+    await tester.enterText(quantityField, '2');
+    await tester.tap(find.text('登録する'));
+    await tester.pumpAndSettle();
+
+    final repository = WeeklyShoppingRepository(database);
+    final savedWeek = await repository.loadWeek(_nextWeekStart());
+    expect(
+      savedWeek.weekdaySections
+          .firstWhere((section) => section.section == ShoppingSection.morning)
+          .items
+          .any((item) => item.name == '手入力りんご'),
       isTrue,
     );
   });

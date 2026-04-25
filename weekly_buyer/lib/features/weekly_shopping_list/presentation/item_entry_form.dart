@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
 import '../domain/weekly_shopping_models.dart';
+import 'product_name_voice_input_service.dart';
 
-class ItemEntryForm extends StatefulWidget {
+class ItemEntryForm extends ConsumerStatefulWidget {
   const ItemEntryForm({
     super.key,
     required this.candidates,
@@ -31,7 +32,7 @@ class ItemEntryForm extends StatefulWidget {
   final List<ShoppingSection> sectionOptions;
 
   @override
-  State<ItemEntryForm> createState() => _ItemEntryFormState();
+  ConsumerState<ItemEntryForm> createState() => _ItemEntryFormState();
 }
 
 class MealMenuAddSheet extends StatefulWidget {
@@ -464,12 +465,13 @@ class _MealMenuSectionEditorState extends ConsumerState<MealMenuSectionEditor> {
   }
 }
 
-class _ItemEntryFormState extends State<ItemEntryForm> {
+class _ItemEntryFormState extends ConsumerState<ItemEntryForm> {
   late final TextEditingController _nameController;
   late final TextEditingController _quantityController;
   late ShoppingSection _selectedSection;
   ItemCandidate? _selectedCandidate;
   bool _isContinuingAdd = false;
+  bool _isListeningForVoice = false;
 
   @override
   void initState() {
@@ -518,6 +520,42 @@ class _ItemEntryFormState extends State<ItemEntryForm> {
 
   void _notifyChanged() {
     widget.onChanged?.call(_currentDraft());
+  }
+
+  Future<void> _handleVoiceInput() async {
+    if (_isListeningForVoice) {
+      return;
+    }
+
+    setState(() {
+      _isListeningForVoice = true;
+    });
+
+    try {
+      final recognizedText = await ref.read(productNameVoiceInputServiceProvider).listen(context);
+      if (!mounted || recognizedText == null) {
+        return;
+      }
+
+      setState(() {
+        _nameController.text = recognizedText;
+        _nameController.selection = TextSelection.collapsed(offset: recognizedText.length);
+        _selectedCandidate = null;
+      });
+      _notifyChanged();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('音声入力を開始できませんでした')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isListeningForVoice = false;
+        });
+      }
+    }
   }
 
   ItemAddDraft _currentDraft() {
@@ -637,7 +675,14 @@ class _ItemEntryFormState extends State<ItemEntryForm> {
               flex: 3,
               child: TextField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: '商品名'),
+                decoration: InputDecoration(
+                  labelText: '商品名',
+                  suffixIcon: IconButton(
+                    tooltip: _isListeningForVoice ? '音声入力中' : '商品名を音声入力',
+                    onPressed: _isListeningForVoice ? null : _handleVoiceInput,
+                    icon: Icon(_isListeningForVoice ? Icons.mic : Icons.mic_none),
+                  ),
+                ),
                 onChanged: (_) {
                   setState(() {
                     _selectedCandidate = null;
