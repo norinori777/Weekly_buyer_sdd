@@ -28,6 +28,36 @@ extension MealSectionLabel on MealSection {
       };
 }
 
+enum WeekViewMode { editable, priorWeekReadOnly }
+
+class WeekViewState {
+  const WeekViewState({
+    required this.selectedDate,
+    required this.defaultNextWeekStart,
+  });
+
+  final DateTime selectedDate;
+  final DateTime defaultNextWeekStart;
+
+  DateTime get selectedWeekStart => startOfWeek(selectedDate);
+
+  bool get isReadOnly => selectedWeekStart.isBefore(defaultNextWeekStart);
+
+  WeekViewMode get mode => isReadOnly ? WeekViewMode.priorWeekReadOnly : WeekViewMode.editable;
+
+  int get weekOffset => selectedWeekStart.difference(defaultNextWeekStart).inDays ~/ 7;
+
+  WeekViewState copyWith({
+    DateTime? selectedDate,
+    DateTime? defaultNextWeekStart,
+  }) {
+    return WeekViewState(
+      selectedDate: selectedDate ?? this.selectedDate,
+      defaultNextWeekStart: defaultNextWeekStart ?? this.defaultNextWeekStart,
+    );
+  }
+}
+
 extension ShoppingSectionMealSection on ShoppingSection {
   MealSection? get mealSection => switch (this) {
         ShoppingSection.morning => MealSection.morning,

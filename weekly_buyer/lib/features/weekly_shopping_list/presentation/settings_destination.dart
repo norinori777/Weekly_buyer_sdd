@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/widgets/weekly_buyer_brand_icon.dart';
 import 'category_item_settings_destination.dart';
 import 'category_order_destination.dart';
 
@@ -10,7 +11,14 @@ class SettingsDestination extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('設定'),
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            WeeklyBuyerBrandIcon(size: 28),
+            SizedBox(width: 10),
+            Text('設定'),
+          ],
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

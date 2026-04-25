@@ -8,6 +8,13 @@ class WeeklyShoppingRepository {
 
   final AppDatabase _database;
 
+  WeekRange loadWeekRange(DateTime referenceDate) {
+    return WeekRange(
+      start: startOfWeek(referenceDate),
+      end: endOfWeek(referenceDate),
+    );
+  }
+
   Future<List<CategoryEntry>> loadCategories() {
     return _loadCategories();
   }
@@ -21,8 +28,7 @@ class WeeklyShoppingRepository {
   }
 
   Future<MealMenuDaySnapshot> loadMealMenuSnapshot(DateTime referenceDate) async {
-    final weekStart = startOfWeek(referenceDate);
-    final weekEnd = endOfWeek(referenceDate);
+    final weekRange = loadWeekRange(referenceDate);
     final dailyMealMenu = await _loadDailyMealMenu(referenceDate);
     final entries = await _loadMealMenuEntries(dailyMealMenu?.id);
     final groupedSections = MealSection.values
@@ -35,7 +41,7 @@ class WeeklyShoppingRepository {
         .toList();
 
     return MealMenuDaySnapshot(
-      weekRange: WeekRange(start: weekStart, end: weekEnd),
+      weekRange: weekRange,
       selectedDate: dateOnly(referenceDate),
       sections: groupedSections,
       suggestions: await loadMealMenuSuggestions(),
@@ -370,9 +376,8 @@ class WeeklyShoppingRepository {
   }
 
   Future<WeeklyShoppingSnapshot> loadWeek(DateTime referenceDate) async {
-    final weekStart = startOfWeek(referenceDate);
-    final weekEnd = endOfWeek(referenceDate);
-    final weeklyList = await _ensureWeeklyList(weekStart, weekEnd);
+    final weekRange = loadWeekRange(referenceDate);
+    final weeklyList = await _ensureWeeklyList(weekRange.start, weekRange.end);
     final dailyMemo = await _loadDailyMemo(referenceDate);
 
     final categories = await loadCategories();
@@ -443,7 +448,7 @@ class WeeklyShoppingRepository {
       ..sort((left, right) => right.sortOrder.compareTo(left.sortOrder));
 
     return WeeklyShoppingSnapshot(
-      weekRange: WeekRange(start: weekStart, end: weekEnd),
+      weekRange: weekRange,
       selectedDate: dateOnly(referenceDate),
       dailyMemo: dailyMemo,
       categories: categories,

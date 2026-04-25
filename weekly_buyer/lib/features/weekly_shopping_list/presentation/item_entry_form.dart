@@ -145,11 +145,13 @@ class DailyMemoEditor extends StatefulWidget {
     required this.selectedDate,
     required this.initialText,
     required this.onSave,
+    this.enabled = true,
   });
 
   final DateTime selectedDate;
   final String initialText;
   final Future<void> Function(String memoText) onSave;
+  final bool enabled;
 
   @override
   State<DailyMemoEditor> createState() => _DailyMemoEditorState();
@@ -218,6 +220,7 @@ class _DailyMemoEditorState extends State<DailyMemoEditor> {
               controller: _memoController,
               minLines: 3,
               maxLines: 6,
+              enabled: widget.enabled,
               decoration: const InputDecoration(
                 labelText: 'メモ',
                 alignLabelWithHint: true,
@@ -225,32 +228,38 @@ class _DailyMemoEditorState extends State<DailyMemoEditor> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _isSaving
-                        ? null
-                        : () async {
-                            _memoController.clear();
-                            await _handleSave('');
-                          },
-                    child: const Text('クリア'),
+            if (!widget.enabled)
+              Text(
+                '前の週では編集できません。',
+                style: Theme.of(context).textTheme.bodySmall,
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _isSaving
+                          ? null
+                          : () async {
+                              _memoController.clear();
+                              await _handleSave('');
+                            },
+                      child: const Text('クリア'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _isSaving
-                        ? null
-                        : () async {
-                            await _handleSave(_memoController.text);
-                          },
-                    child: Text(_isSaving ? '保存中...' : '保存'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _isSaving
+                          ? null
+                          : () async {
+                              await _handleSave(_memoController.text);
+                            },
+                      child: Text(_isSaving ? '保存中...' : '保存'),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
           ],
         ),
       ),

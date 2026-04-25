@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/widgets/weekly_buyer_brand_icon.dart';
 import '../domain/weekly_shopping_models.dart';
 import 'category_order_notifier.dart';
 
@@ -13,7 +14,14 @@ class CategoryOrderDestination extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('カテゴリの並び順'),
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            WeeklyBuyerBrandIcon(size: 28),
+            SizedBox(width: 10),
+            Text('カテゴリの並び順'),
+          ],
+        ),
       ),
       body: state.when(
         loading: () => const Center(child: CircularProgressIndicator()),

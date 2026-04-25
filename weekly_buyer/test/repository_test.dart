@@ -121,6 +121,108 @@ void main() {
     },
   );
 
+  test('loads distinct snapshots for the next week and the previous week', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    final nextWeekStart = DateTime(2026, 4, 27);
+    final previousWeekStart = nextWeekStart.subtract(const Duration(days: 7));
+    final twoWeeksBackStart = nextWeekStart.subtract(const Duration(days: 14));
+    final threeWeeksBackStart = nextWeekStart.subtract(const Duration(days: 21));
+
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            name: '食品',
+            sortOrder: const drift.Value(0),
+          ),
+        );
+    final category = await (
+      database.select(database.categories)
+        ..where((table) => table.name.equals('食品'))
+    ).getSingle();
+
+    await repository.addItem(
+      referenceDate: previousWeekStart,
+      request: AddItemRequest(
+        name: '先週牛乳',
+        quantity: 1,
+        section: ShoppingSection.morning,
+        categoryId: category.id,
+      ),
+    );
+    await repository.addItem(
+      referenceDate: nextWeekStart,
+      request: AddItemRequest(
+        name: '今週卵',
+        quantity: 2,
+        section: ShoppingSection.morning,
+        categoryId: category.id,
+      ),
+    );
+    await repository.addItem(
+      referenceDate: twoWeeksBackStart,
+      request: AddItemRequest(
+        name: '2週間前豆腐',
+        quantity: 1,
+        section: ShoppingSection.morning,
+        categoryId: category.id,
+      ),
+    );
+    await repository.addItem(
+      referenceDate: threeWeeksBackStart,
+      request: AddItemRequest(
+        name: '3週間前みそ',
+        quantity: 1,
+        section: ShoppingSection.morning,
+        categoryId: category.id,
+      ),
+    );
+
+    final previousSnapshot = await repository.loadWeek(previousWeekStart);
+    final nextSnapshot = await repository.loadWeek(nextWeekStart);
+    final twoWeeksBackSnapshot = await repository.loadWeek(twoWeeksBackStart);
+    final threeWeeksBackSnapshot = await repository.loadWeek(threeWeeksBackStart);
+
+    expect(previousSnapshot.weekRange.start, previousWeekStart);
+    expect(previousSnapshot.weekRange.end, previousWeekStart.add(const Duration(days: 6)));
+    expect(nextSnapshot.weekRange.start, nextWeekStart);
+    expect(nextSnapshot.weekRange.end, nextWeekStart.add(const Duration(days: 6)));
+
+    expect(
+      previousSnapshot.weekdaySections
+          .firstWhere((section) => section.section == ShoppingSection.morning)
+          .items
+          .single
+          .name,
+      '先週牛乳',
+    );
+    expect(
+      nextSnapshot.weekdaySections
+          .firstWhere((section) => section.section == ShoppingSection.morning)
+          .items
+          .single
+          .name,
+      '今週卵',
+    );
+    expect(
+      twoWeeksBackSnapshot.weekdaySections
+          .firstWhere((section) => section.section == ShoppingSection.morning)
+          .items
+          .single
+          .name,
+      '2週間前豆腐',
+    );
+    expect(
+      threeWeeksBackSnapshot.weekdaySections
+          .firstWhere((section) => section.section == ShoppingSection.morning)
+          .items
+          .single
+          .name,
+      '3週間前みそ',
+    );
+  });
+
   test('saves and reloads a private memo for the selected day', () async {
     final database = AppDatabase(executor: NativeDatabase.memory());
     addTearDown(database.close);

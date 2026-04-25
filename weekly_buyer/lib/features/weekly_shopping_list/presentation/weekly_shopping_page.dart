@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
 import '../domain/weekly_shopping_models.dart';
+import 'week_header.dart';
+import '../../../app/widgets/weekly_buyer_brand_icon.dart';
 
 class WeeklyShoppingPage extends ConsumerStatefulWidget {
   const WeeklyShoppingPage({super.key});
@@ -12,21 +14,23 @@ class WeeklyShoppingPage extends ConsumerStatefulWidget {
 }
 
 class _WeeklyShoppingPageState extends ConsumerState<WeeklyShoppingPage> {
-  late DateTime _selectedDate;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedDate = dateOnly(DateTime.now());
-  }
-
   @override
   Widget build(BuildContext context) {
-    final snapshot = ref.watch(weeklyShoppingSnapshotProvider(_selectedDate));
+    final weekView = ref.watch(weekViewStateProvider);
+    final selectedDate = weekView.selectedDate;
+    final isReadOnly = weekView.isReadOnly;
+    final snapshot = ref.watch(weeklyShoppingSnapshotProvider(selectedDate));
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Weekly Buyer'),
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            WeeklyBuyerBrandIcon(size: 28),
+            SizedBox(width: 10),
+            Text('Weekly Buyer'),
+          ],
+        ),
       ),
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -42,12 +46,13 @@ class _WeeklyShoppingPageState extends ConsumerState<WeeklyShoppingPage> {
             children: [
               WeekHeader(
                 weekRange: data.weekRange,
-                selectedDate: _selectedDate,
+                selectedDate: selectedDate,
                 onDateSelected: (date) {
-                  setState(() {
-                    _selectedDate = dateOnly(date);
-                  });
+                  selectWeekDate(ref, date);
                 },
+                onPreviousWeek: () => goToPreviousWeek(ref),
+                onReturnToDefaultWeek: isReadOnly ? () => resetSelectedWeekToDefault(ref) : null,
+                isReadOnly: isReadOnly,
               ),
               if (data.hiddenPurchasedCount > 0 || data.lastPurchasedItem != null) ...[
                 const SizedBox(height: 16),
@@ -55,8 +60,11 @@ class _WeeklyShoppingPageState extends ConsumerState<WeeklyShoppingPage> {
                   hiddenPurchasedCount: data.hiddenPurchasedCount,
                   lastPurchasedItem: data.lastPurchasedItem,
                   onUndo: () async {
-                    await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase(_selectedDate);
-                    ref.invalidate(weeklyShoppingSnapshotProvider(_selectedDate));
+                    if (isReadOnly) {
+                      return;
+                    }
+                    await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase(selectedDate);
+                    ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
                   },
                 ),
               ],
@@ -65,11 +73,15 @@ class _WeeklyShoppingPageState extends ConsumerState<WeeklyShoppingPage> {
                 ShoppingSectionView(
                   section: section.section,
                   items: section.items,
+                  isReadOnly: isReadOnly,
                   onAdd: () => _openAddSheet(section.section, data.candidates),
                   onTogglePurchased: (item) async {
+                    if (isReadOnly) {
+                      return;
+                    }
                     final messenger = ScaffoldMessenger.of(context);
                     await ref.read(weeklyShoppingRepositoryProvider).togglePurchased(item.id);
-                    ref.invalidate(weeklyShoppingSnapshotProvider(_selectedDate));
+                    ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
                     if (!mounted) {
                       return;
                     }
@@ -81,8 +93,8 @@ class _WeeklyShoppingPageState extends ConsumerState<WeeklyShoppingPage> {
                           action: SnackBarAction(
                             label: '元に戻す',
                             onPressed: () async {
-                              await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase(_selectedDate);
-                              ref.invalidate(weeklyShoppingSnapshotProvider(_selectedDate));
+                              await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase(selectedDate);
+                              ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
                             },
                           ),
                         ),
@@ -98,13 +110,15 @@ class _WeeklyShoppingPageState extends ConsumerState<WeeklyShoppingPage> {
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.all(16),
         child: FilledButton.icon(
-          onPressed: () async {
-            final snapshotData = await ref.read(weeklyShoppingSnapshotProvider(_selectedDate).future);
-            if (!mounted) {
-              return;
-            }
-            await _openAddSheet(ShoppingSection.morning, snapshotData.candidates);
-          },
+          onPressed: isReadOnly
+              ? null
+              : () async {
+                  final snapshotData = await ref.read(weeklyShoppingSnapshotProvider(selectedDate).future);
+                  if (!mounted) {
+                    return;
+                  }
+                  await _openAddSheet(ShoppingSection.morning, snapshotData.candidates);
+                },
           icon: const Icon(Icons.add),
           label: const Text('商品を追加'),
         ),
@@ -133,70 +147,10 @@ class _WeeklyShoppingPageState extends ConsumerState<WeeklyShoppingPage> {
     }
 
     await ref.read(weeklyShoppingRepositoryProvider).addItem(
-          referenceDate: _selectedDate,
+          referenceDate: ref.read(weekViewStateProvider).selectedDate,
           request: request,
         );
-    ref.invalidate(weeklyShoppingSnapshotProvider(_selectedDate));
-  }
-}
-
-class WeekHeader extends StatelessWidget {
-  const WeekHeader({
-    super.key,
-    required this.weekRange,
-    required this.selectedDate,
-    required this.onDateSelected,
-  });
-
-  final WeekRange weekRange;
-  final DateTime selectedDate;
-  final ValueChanged<DateTime> onDateSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final weekDays = List.generate(7, (index) => weekRange.start.add(Duration(days: index)));
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              formatWeekLabel(weekRange),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final day in weekDays) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        selected: dateOnly(day) == dateOnly(selectedDate),
-                        label: Text(_weekdayLabel(day)),
-                        onSelected: (_) => onDateSelected(day),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _weekdayLabel(DateTime date) {
-    const weekdays = ['月', '火', '水', '木', '金', '土', '日'];
-    return '${weekdays[date.weekday - 1]} ${date.month}/${date.day}';
+    ref.invalidate(weeklyShoppingSnapshotProvider(ref.read(weekViewStateProvider).selectedDate));
   }
 }
 
@@ -240,12 +194,14 @@ class ShoppingSectionView extends StatelessWidget {
     super.key,
     required this.section,
     required this.items,
+    required this.isReadOnly,
     required this.onAdd,
     required this.onTogglePurchased,
   });
 
   final ShoppingSection section;
   final List<ShoppingItemEntry> items;
+  final bool isReadOnly;
   final VoidCallback onAdd;
   final ValueChanged<ShoppingItemEntry> onTogglePurchased;
 
@@ -266,7 +222,7 @@ class ShoppingSectionView extends StatelessWidget {
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: onAdd,
+                  onPressed: isReadOnly ? null : onAdd,
                   icon: const Icon(Icons.add),
                   label: const Text('追加'),
                 ),
@@ -309,7 +265,13 @@ class ShoppingSectionView extends StatelessWidget {
                     ),
                   ),
                   background: const SizedBox.shrink(),
-                  onDismissed: (_) => onTogglePurchased(item),
+                  confirmDismiss: (_) async {
+                    if (isReadOnly) {
+                      return false;
+                    }
+                    onTogglePurchased(item);
+                    return true;
+                  },
                   child: ShoppingItemTile(
                     item: item,
                     onTogglePurchased: () => onTogglePurchased(item),

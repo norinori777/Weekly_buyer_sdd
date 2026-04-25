@@ -9,6 +9,7 @@ import 'package:weekly_buyer/app/providers.dart';
 import 'package:weekly_buyer/app/weekly_buyer_app.dart';
 import 'package:weekly_buyer/features/weekly_shopping_list/data/weekly_shopping_repository.dart';
 import 'package:weekly_buyer/features/weekly_shopping_list/domain/weekly_shopping_models.dart';
+import 'package:weekly_buyer/app/widgets/weekly_buyer_brand_icon.dart';
 import 'package:weekly_buyer/features/weekly_shopping_list/presentation/week_header.dart';
 
 Future<void> _seedWeeklyItem(
@@ -60,6 +61,24 @@ DateTime _nextWeekStart() {
 }
 
 void main() {
+  testWidgets('renders the shared SVG brand icon in the app chrome', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.byType(WeeklyBuyerBrandIcon), findsWidgets);
+  });
+
   testWidgets('shows category-based purchase list without creation controls', (
     WidgetTester tester,
   ) async {
@@ -525,4 +544,145 @@ void main() {
       expect(fridayDate.weekday, DateTime.friday);
     },
   );
+
+  testWidgets('moves to a prior week and returns to the next-week default view', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final nextWeekStart = _nextWeekStart();
+    final previousWeekStart = nextWeekStart.subtract(const Duration(days: 7));
+    final twoWeeksBackStart = nextWeekStart.subtract(const Duration(days: 14));
+    final threeWeeksBackStart = nextWeekStart.subtract(const Duration(days: 21));
+
+    await _seedWeeklyItem(
+      database,
+      referenceDate: nextWeekStart,
+      categoryName: '食品',
+      itemName: '今週牛乳',
+    );
+    await _seedWeeklyItem(
+      database,
+      referenceDate: previousWeekStart,
+      categoryName: '食品',
+      itemName: '先週牛乳',
+    );
+    await _seedWeeklyItem(
+      database,
+      referenceDate: twoWeeksBackStart,
+      categoryName: '食品',
+      itemName: '2週間前豆腐',
+    );
+    await _seedWeeklyItem(
+      database,
+      referenceDate: threeWeeksBackStart,
+      categoryName: '食品',
+      itemName: '3週間前みそ',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(formatWeekLabel(WeekRange(start: nextWeekStart, end: nextWeekStart.add(const Duration(days: 6))))), findsOneWidget);
+    expect(find.text('参照中'), findsNothing);
+
+    await tester.tap(find.text('前の週'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(formatWeekLabel(WeekRange(start: previousWeekStart, end: previousWeekStart.add(const Duration(days: 6))))), findsOneWidget);
+    expect(find.text('参照中'), findsOneWidget);
+    expect(find.text('前の週を表示中のため、表示のみになります。'), findsOneWidget);
+    expect(find.text('先週牛乳'), findsOneWidget);
+    expect(find.text('今週牛乳'), findsNothing);
+
+    await tester.tap(find.text('前の週'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(formatWeekLabel(WeekRange(start: twoWeeksBackStart, end: twoWeeksBackStart.add(const Duration(days: 6))))), findsOneWidget);
+    expect(find.text('2週間前豆腐'), findsOneWidget);
+    expect(find.text('先週牛乳'), findsNothing);
+
+    await tester.tap(find.text('前の週'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(formatWeekLabel(WeekRange(start: threeWeeksBackStart, end: threeWeeksBackStart.add(const Duration(days: 6))))), findsOneWidget);
+    expect(find.text('3週間前みそ'), findsOneWidget);
+    expect(find.text('2週間前豆腐'), findsNothing);
+
+    final addButton = tester.widget<FilledButton>(find.widgetWithText(FilledButton, '商品を追加'));
+    expect(addButton.onPressed, isNull);
+
+    final mealButtons = tester.widgetList<TextButton>(find.widgetWithText(TextButton, '料理メニュー追加')).toList();
+    expect(mealButtons, isNotEmpty);
+    expect(mealButtons.every((button) => button.onPressed == null), isTrue);
+
+    final deleteButtons = tester.widgetList<IconButton>(find.widgetWithIcon(IconButton, Icons.close_rounded)).toList();
+    expect(deleteButtons, isNotEmpty);
+    expect(deleteButtons.every((button) => button.onPressed == null), isTrue);
+
+    await tester.tap(find.text('次週に戻る'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(formatWeekLabel(WeekRange(start: nextWeekStart, end: nextWeekStart.add(const Duration(days: 6))))), findsOneWidget);
+    expect(find.text('参照中'), findsNothing);
+    expect(find.text('今週牛乳'), findsOneWidget);
+
+    final enabledAddButton = tester.widget<FilledButton>(find.widgetWithText(FilledButton, '商品を追加'));
+    expect(enabledAddButton.onPressed, isNotNull);
+  });
+
+  testWidgets('keeps the purchase list read-only when a prior week is selected', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final nextWeekStart = _nextWeekStart();
+    final previousWeekStart = nextWeekStart.subtract(const Duration(days: 7));
+
+    await _seedWeeklyItem(
+      database,
+      referenceDate: previousWeekStart,
+      categoryName: '食品',
+      itemName: '先週牛乳',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('前の週'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('購入リスト'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('前の週を表示中のため、購入リストは表示のみです。'), findsOneWidget);
+    expect(find.byType(Dismissible), findsNothing);
+    expect(find.text('先週牛乳'), findsOneWidget);
+
+    final purchaseButtons = tester.widgetList<IconButton>(find.widgetWithIcon(IconButton, Icons.check_circle_outline)).toList();
+    expect(purchaseButtons, isNotEmpty);
+    expect(purchaseButtons.every((button) => button.onPressed == null), isTrue);
+
+    final bannerButtons = tester.widgetList<TextButton>(find.widgetWithText(TextButton, '元に戻す')).toList();
+    expect(bannerButtons, isEmpty);
+  });
 }
