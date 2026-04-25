@@ -72,8 +72,23 @@ final previousShoppingDestinationProvider = StateProvider<MainShellDestination>(
 	return MainShellDestination.purchaseList;
 });
 
-final selectedWeekDateProvider = StateProvider<DateTime>((ref) {
+final defaultNextWeekStartProvider = Provider<DateTime>((ref) {
 	return startOfNextWeek(DateTime.now());
+});
+
+final selectedWeekDateProvider = StateProvider<DateTime>((ref) {
+	return ref.read(defaultNextWeekStartProvider);
+});
+
+final weekViewStateProvider = Provider<WeekViewState>((ref) {
+	return WeekViewState(
+		selectedDate: ref.watch(selectedWeekDateProvider),
+		defaultNextWeekStart: ref.watch(defaultNextWeekStartProvider),
+	);
+});
+
+final isPriorWeekViewProvider = Provider<bool>((ref) {
+	return ref.watch(weekViewStateProvider).isReadOnly;
 });
 
 final itemAddDraftProvider = StateProvider<ItemAddDraft>((ref) {
@@ -102,3 +117,26 @@ final weeklyShoppingSnapshotProvider =
 final mealMenuSnapshotProvider = FutureProvider.family<MealMenuDaySnapshot, DateTime>((ref, referenceDate) {
 	return ref.watch(weeklyShoppingRepositoryProvider).loadMealMenuSnapshot(referenceDate);
 });
+
+void selectWeekDate(WidgetRef ref, DateTime date) {
+	ref.read(selectedWeekDateProvider.notifier).state = dateOnly(date);
+}
+
+void moveSelectedWeekByDays(WidgetRef ref, int deltaDays) {
+	selectWeekDate(
+		ref,
+		ref.read(selectedWeekDateProvider).add(Duration(days: deltaDays)),
+	);
+}
+
+void goToPreviousWeek(WidgetRef ref) {
+	moveSelectedWeekByDays(ref, -7);
+}
+
+void goToNextWeek(WidgetRef ref) {
+	moveSelectedWeekByDays(ref, 7);
+}
+
+void resetSelectedWeekToDefault(WidgetRef ref) {
+	ref.read(selectedWeekDateProvider.notifier).state = ref.read(defaultNextWeekStartProvider);
+}

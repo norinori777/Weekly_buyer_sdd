@@ -8,11 +8,17 @@ class WeekHeader extends StatelessWidget {
     required this.weekRange,
     required this.selectedDate,
     required this.onDateSelected,
+    this.onPreviousWeek,
+    this.onReturnToDefaultWeek,
+    this.isReadOnly = false,
   });
 
   final WeekRange weekRange;
   final DateTime selectedDate;
   final ValueChanged<DateTime> onDateSelected;
+  final VoidCallback? onPreviousWeek;
+  final VoidCallback? onReturnToDefaultWeek;
+  final bool isReadOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -45,9 +51,39 @@ class WeekHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                formatWeekLabel(weekRange),
-                style: Theme.of(context).textTheme.titleMedium,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      formatWeekLabel(weekRange),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  if (isReadOnly) ...[
+                    Chip(
+                      label: const Text('参照中'),
+                      visualDensity: VisualDensity.compact,
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  if (onReturnToDefaultWeek != null) ...[
+                    TextButton.icon(
+                      onPressed: onReturnToDefaultWeek,
+                      icon: const Icon(Icons.restart_alt),
+                      label: const Text('次週に戻る'),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  if (onPreviousWeek != null)
+                    TextButton.icon(
+                      onPressed: onPreviousWeek,
+                      icon: const Icon(Icons.chevron_left),
+                      label: const Text('前の週'),
+                    ),
+                ],
               ),
               const SizedBox(height: 12),
               Wrap(

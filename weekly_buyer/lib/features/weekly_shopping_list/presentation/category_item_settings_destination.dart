@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/widgets/weekly_buyer_brand_icon.dart';
 import '../domain/weekly_shopping_models.dart';
 import 'category_item_settings_notifier.dart';
 import 'item_editor_destination.dart';
@@ -16,7 +17,14 @@ class CategoryItemSettingsDestination extends ConsumerWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('カテゴリと商品'),
+          title: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              WeeklyBuyerBrandIcon(size: 28),
+              SizedBox(width: 10),
+              Text('カテゴリと商品'),
+            ],
+          ),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'カテゴリ'),

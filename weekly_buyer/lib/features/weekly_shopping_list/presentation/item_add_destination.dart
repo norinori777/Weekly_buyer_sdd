@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
+import '../../../app/widgets/weekly_buyer_brand_icon.dart';
 import '../domain/weekly_shopping_models.dart';
 import 'item_entry_form.dart';
 import 'week_header.dart';
@@ -11,13 +12,24 @@ class ItemAddDestination extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedDate = ref.watch(selectedWeekDateProvider);
+    final weekView = ref.watch(weekViewStateProvider);
+    final selectedDate = weekView.selectedDate;
+    final isReadOnly = weekView.isReadOnly;
     final snapshot = ref.watch(weeklyShoppingSnapshotProvider(selectedDate));
     final mealMenuSnapshot = ref.watch(mealMenuSnapshotProvider(selectedDate));
     final draft = ref.watch(itemAddDraftProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('商品追加')),
+      appBar: AppBar(
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            WeeklyBuyerBrandIcon(size: 28),
+            SizedBox(width: 10),
+            Text('商品追加'),
+          ],
+        ),
+      ),
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) => Center(
@@ -43,16 +55,24 @@ class ItemAddDestination extends ConsumerWidget {
                     weekRange: data.weekRange,
                     selectedDate: selectedDate,
                     onDateSelected: (date) {
-                      ref.read(selectedWeekDateProvider.notifier).state = dateOnly(
-                        date,
-                      );
+                      selectWeekDate(ref, date);
                     },
+                    onPreviousWeek: () => goToPreviousWeek(ref),
+                    onReturnToDefaultWeek: isReadOnly ? () => resetSelectedWeekToDefault(ref) : null,
+                    isReadOnly: isReadOnly,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '週の曜日を切り替えながら、その曜日に登録する商品をまとめて入力できます。',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
+                  if (isReadOnly) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '前の週を表示中のため、表示のみになります。',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   for (final section in ShoppingSection.values.where(
                     (section) => !section.isDayIndependent,
@@ -60,13 +80,20 @@ class ItemAddDestination extends ConsumerWidget {
                     _SectionPreviewCard(
                       key: ValueKey('section-card-${section.name}-$selectedDate'),
                       section: section,
+                      isReadOnly: isReadOnly,
                       onDeleteItem: (item) async {
+                        if (isReadOnly) {
+                          return;
+                        }
                         await ref
                             .read(weeklyShoppingRepositoryProvider)
                             .deleteItem(item.id);
                         ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
                       },
                       onAddMealMenuEntry: (mealSection) async {
+                        if (isReadOnly) {
+                          return;
+                        }
                         await _openMealMenuSheet(
                           context: context,
                           ref: ref,
@@ -87,7 +114,11 @@ class ItemAddDestination extends ConsumerWidget {
                     key: ValueKey('daily-memo-$selectedDate'),
                     selectedDate: selectedDate,
                     initialText: data.dailyMemo?.memoText ?? '',
+                    enabled: !isReadOnly,
                     onSave: (memoText) async {
+                      if (isReadOnly) {
+                        return;
+                      }
                       await ref.read(weeklyShoppingRepositoryProvider).saveDailyMemo(
                             referenceDate: selectedDate,
                             memoText: memoText,
@@ -104,16 +135,18 @@ class ItemAddDestination extends ConsumerWidget {
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: FilledButton.icon(
-          onPressed: () => _openAddSheet(
-            context: context,
-            ref: ref,
-            selectedDate: selectedDate,
-            candidates: snapshot.maybeWhen(
-              data: (data) => data.candidates,
-              orElse: () => const [],
-            ),
-            draft: draft,
-          ),
+          onPressed: isReadOnly
+              ? null
+              : () => _openAddSheet(
+                    context: context,
+                    ref: ref,
+                    selectedDate: selectedDate,
+                    candidates: snapshot.maybeWhen(
+                      data: (data) => data.candidates,
+                      orElse: () => const [],
+                    ),
+                    draft: draft,
+                  ),
           icon: const Icon(Icons.add),
           label: const Text('商品を追加'),
         ),
@@ -221,6 +254,7 @@ class _SectionPreviewCard extends StatelessWidget {
     required this.section,
     required this.items,
     required this.mealMenuEntries,
+    required this.isReadOnly,
     required this.onDeleteItem,
     required this.onAddMealMenuEntry,
   });
@@ -228,6 +262,7 @@ class _SectionPreviewCard extends StatelessWidget {
   final ShoppingSection section;
   final List<ShoppingItemEntry> items;
   final List<MealMenuEntry> mealMenuEntries;
+  final bool isReadOnly;
   final Future<void> Function(ShoppingItemEntry item) onDeleteItem;
   final Future<void> Function(MealSection section) onAddMealMenuEntry;
 
@@ -248,7 +283,7 @@ class _SectionPreviewCard extends StatelessWidget {
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: section.mealSection == null
+                  onPressed: isReadOnly || section.mealSection == null
                       ? null
                       : () => onAddMealMenuEntry(section.mealSection!),
                   icon: const Icon(Icons.add),
@@ -275,7 +310,7 @@ class _SectionPreviewCard extends StatelessWidget {
                   subtitle: Text('数量 ${item.quantity}'),
                   trailing: IconButton(
                     tooltip: '削除',
-                    onPressed: () => onDeleteItem(item),
+                    onPressed: isReadOnly ? null : () => onDeleteItem(item),
                     icon: Icon(
                       Icons.close_rounded,
                       color: Theme.of(context).colorScheme.error,
@@ -291,6 +326,13 @@ class _SectionPreviewCard extends StatelessWidget {
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
+            if (isReadOnly) ...[
+              Text(
+                '前の週では編集できません。',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+            ],
             if (mealMenuEntries.isEmpty)
               Text(
                 'まだ登録されていません。',

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
+import '../../../app/widgets/weekly_buyer_brand_icon.dart';
 import '../domain/weekly_shopping_models.dart';
 import 'weekly_shopping_page.dart' show UndoBanner;
 
@@ -11,9 +12,13 @@ class PurchaseListDestination extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(selectedWeekDateProvider);
+    final isReadOnly = ref.watch(isPriorWeekViewProvider);
     final snapshot = ref.watch(weeklyShoppingSnapshotProvider(selectedDate));
     final bottomBanner = snapshot.maybeWhen(
       data: (data) {
+        if (isReadOnly) {
+          return const SizedBox.shrink();
+        }
         if (data.hiddenPurchasedCount == 0 && data.lastPurchasedItem == null) {
           return const SizedBox.shrink();
         }
@@ -35,7 +40,14 @@ class PurchaseListDestination extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('購入リスト'),
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            WeeklyBuyerBrandIcon(size: 28),
+            SizedBox(width: 10),
+            Text('購入リスト'),
+          ],
+        ),
       ),
       body: snapshot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -46,15 +58,26 @@ class PurchaseListDestination extends ConsumerWidget {
           ),
         ),
         data: (data) {
-          final showBottomBanner = data.hiddenPurchasedCount > 0 || data.lastPurchasedItem != null;
+          final showBottomBanner = !isReadOnly && (data.hiddenPurchasedCount > 0 || data.lastPurchasedItem != null);
 
           return ListView(
             padding: EdgeInsets.fromLTRB(16, 16, 16, showBottomBanner ? 112 : 16),
             children: [
+              if (isReadOnly) ...[
+                Text(
+                  '前の週を表示中のため、購入リストは表示のみです。',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+              ],
               for (final group in data.categoryGroups) ...[
                 _CategoryGroupCard(
                   group: group,
+                  isReadOnly: isReadOnly,
                   onTogglePurchased: (item) async {
+                    if (isReadOnly) {
+                      return;
+                    }
                     final messenger = ScaffoldMessenger.of(context);
                     await ref.read(weeklyShoppingRepositoryProvider).togglePurchased(item.id);
                     ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
@@ -96,10 +119,12 @@ class PurchaseListDestination extends ConsumerWidget {
 class _CategoryGroupCard extends StatelessWidget {
   const _CategoryGroupCard({
     required this.group,
+    required this.isReadOnly,
     required this.onTogglePurchased,
   });
 
   final ShoppingCategoryGroup group;
+  final bool isReadOnly;
   final Future<void> Function(ShoppingItemEntry) onTogglePurchased;
 
   @override
@@ -116,44 +141,52 @@ class _CategoryGroupCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             for (final item in group.items) ...[
-              Dismissible(
-                key: ValueKey('shopping-item-${item.id}'),
-                direction: DismissDirection.endToStart,
-                secondaryBackground: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.errorContainer,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Icon(Icons.archive_outlined, color: Theme.of(context).colorScheme.onErrorContainer),
-                          const SizedBox(width: 8),
-                          Text(
-                            '購入済み',
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  color: Theme.of(context).colorScheme.onErrorContainer,
-                                ),
-                          ),
-                        ],
+              if (isReadOnly)
+                _PurchaseItemTile(
+                  item: item,
+                  isReadOnly: true,
+                  onTogglePurchased: () {},
+                )
+              else
+                Dismissible(
+                  key: ValueKey('shopping-item-${item.id}'),
+                  direction: DismissDirection.endToStart,
+                  secondaryBackground: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Icon(Icons.archive_outlined, color: Theme.of(context).colorScheme.onErrorContainer),
+                            const SizedBox(width: 8),
+                            Text(
+                              '購入済み',
+                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                    color: Theme.of(context).colorScheme.onErrorContainer,
+                                  ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
+                  background: const SizedBox.shrink(),
+                  confirmDismiss: (_) async {
+                    await onTogglePurchased(item);
+                    return true;
+                  },
+                  child: _PurchaseItemTile(
+                    item: item,
+                    isReadOnly: false,
+                    onTogglePurchased: () => onTogglePurchased(item),
+                  ),
                 ),
-                background: const SizedBox.shrink(),
-                confirmDismiss: (_) async {
-                  await onTogglePurchased(item);
-                  return true;
-                },
-                child: _PurchaseItemTile(
-                  item: item,
-                  onTogglePurchased: () => onTogglePurchased(item),
-                ),
-              ),
               const SizedBox(height: 8),
             ],
           ],
@@ -166,10 +199,12 @@ class _CategoryGroupCard extends StatelessWidget {
 class _PurchaseItemTile extends StatelessWidget {
   const _PurchaseItemTile({
     required this.item,
+    required this.isReadOnly,
     required this.onTogglePurchased,
   });
 
   final ShoppingItemEntry item;
+  final bool isReadOnly;
   final VoidCallback onTogglePurchased;
 
   @override
@@ -182,7 +217,7 @@ class _PurchaseItemTile extends StatelessWidget {
         title: Text(item.name),
         subtitle: Text('数量 ${item.quantity}'),
         trailing: IconButton(
-          onPressed: onTogglePurchased,
+          onPressed: isReadOnly ? null : onTogglePurchased,
           icon: const Icon(Icons.check_circle_outline),
           tooltip: '購入済みにする',
         ),
