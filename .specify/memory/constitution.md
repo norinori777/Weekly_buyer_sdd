@@ -1,50 +1,60 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+- Version change: template -> 1.0.0
+- Modified principles: all template placeholders replaced with Weekly Buyer principles
+- Added sections: Additional Constraints, Development Workflow
+- Removed sections: placeholder comments and unresolved template tokens
+- Templates checked: ✅ .specify/templates/plan-template.md, ✅ .specify/templates/spec-template.md, ✅ .specify/templates/tasks-template.md
+- Follow-up TODOs: none
+-->
+
+# Weekly Buyer Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. 日本語ファースト
+仕様策定、設計、レビュー、開発運用、ユーザー向け説明は原則として日本語で行う。外部ライブラリ名、API 名、エラー名など、日本語化すると意味が落ちる固有名詞は英語のまま併記してよいが、判断の主体は日本語で記述する。
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. 品質ゲート
+仕様には必ず受け入れ基準を明記し、基準を満たすまでマージしない。テスト、Lint、型チェックが通らない変更は完了扱いにしない。仕様・設計・実装の各段階で検証可能な状態を保つ。
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. 技術スタック固定
+UI は Dart + Flutter の Material 3 を基本とし、永続化は Drift、状態管理は Riverpod を採用する。新しい技術を追加する場合は、既存構成より明確な利点があり、保守性・学習コスト・拡張性の面で説明可能でなければならない。
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. 買い物体験の最優先事項
+買い物中の操作は片手で最短で完了できることを最優先にする。商品の購入済み化、削除、元に戻すは画面遷移を増やさず実行できることを重視し、買い物中に必要な情報は現在表示中の一覧画面へ集約する。週単位の見通しとカテゴリ順の把握を優先し、日ごとの情報は補助的に扱う。
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. データ再利用と拡張性
+商品名、カテゴリ、料理グループは再利用できる形で保持する。音声入力や自動入力で新しい商品が現れた場合は、その場で候補として蓄積し、次回以降の入力を速くする。カテゴリ順と並び順はユーザーが制御できるようにし、ローカル保存を基本にして、クラウド同期やウィジェットは後から拡張できる構造を保つ。
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Additional Constraints
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### データと状態の扱い
+商品カテゴリ、商品マスタ、週間リスト、週間リスト明細、料理グループ、料理グループ明細を主要エンティティとして扱う。購入済み、未購入、削除、元に戻すの状態遷移は予測可能でなければならず、何が永続データで何が一時的な UI 状態かを明確に分ける。自動入力時に商品マスタへ存在しない商品が現れた場合は、その場で新規登録を促し、確定後に商品マスタへ登録して再利用可能にする。
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+### UI と操作の制約
+買い物リストは１週間分をひとまとまりとして表示し、カテゴリ順で安定して見えることを優先する。購入済み操作はフリックやチェックなど直感的な操作を優先し、画面下部の削除・元に戻すは誤操作からの復帰手段として扱う。献立の詳細管理は必須にせず、必要になったときに拡張できる程度に留める。
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### 非目標
+最初からクラウド同期を必須にしない。最初から複雑な献立管理や多機能な在庫管理アプリにはしない。将来の共有・同期・ウィジェットは、基本機能を壊さずに追加できる場合のみ採用する。
+
+## Development Workflow
+
+### Spec-Driven Workflow
+開発は constitution → specify → plan → tasks → implement の順で進める。各段階は前段の成果物に依存し、仕様、計画、タスクはそれぞれ独立して読み取れる状態を保つ。ユーザーストーリーは優先度付きで整理し、各ストーリーが独立してテスト可能であることを要求する。
+
+### Review and Validation
+実装前後でテスト、Lint、型チェックを確認し、受け入れ基準を満たさない変更は統合しない。仕様・計画・タスク・実装の各成果物は、憲法の原則に照らして整合性を確認する。レビュー時は、操作の速さ、状態遷移の予測可能性、データ再利用性、拡張可能性を重点的に見る。
+
+### Change Control
+憲法の変更は、なぜ必要か、何が変わるか、既存の仕様や実装へどう影響するかを明記して行う。互換性のない原則変更や削除は MAJOR、原則の追加や意味の拡張は MINOR、文言調整や明確化は PATCH として扱う。変更後は、関連する specification / plan / tasks の見直しを必須とする。
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+この憲法は、個別の仕様書、実装メモ、タスクよりも優先される。憲法に反する提案は採用しない。例外が必要な場合は、理由と影響範囲を記録し、代替案を示したうえで承認を得る。
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+すべての仕様・計画・タスク・実装は、この憲法への適合を確認する。特に、買い物中の操作速度、週単位の可視性、データ再利用、ローカル保存、予測可能な状態遷移は必須項目として扱う。新機能は、既存の基本操作を壊さずに追加できる場合にのみ採用する。
+
+憲法の改定は、変更理由、影響範囲、移行方針を明示して行う。技術スタックの変更、品質ゲートの緩和、買い物体験の原則の変更は慎重に扱い、後方互換性への影響がある場合は必要な移行計画を含める。
+
+**Version**: 1.0.0 | **Ratified**: 2026-04-18 | **Last Amended**: 2026-04-18

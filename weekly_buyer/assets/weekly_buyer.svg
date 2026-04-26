@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- ほんの少し明るくしたグリーン背景（グラデーション） -->
+  <defs>
+    <linearGradient id="vividGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1db954;stop-opacity:1" /> <!-- 明るさと深みのバランスをとった緑 -->
+      <stop offset="100%" style="stop-color:#26d367;stop-opacity:1" /> <!-- 爽やかな終点 -->
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="90" fill="url(#vividGreen)" />
+
+  <!-- 中央の買い物カゴ（白） -->
+  <!-- カゴの形状を少し下げて、数字とのスペースを確保 -->
+  <path d="M60 85 L140 85 L130 130 L70 130 Z" fill="none" stroke="white" stroke-width="8" stroke-linejoin="round" />
+  <path d="M60 85 L52 75 M140 85 L148 75" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" />
+  <circle cx="82" cy="142" r="7" fill="white" />
+  <circle cx="118" cy="142" r="7" fill="white" />
+
+  <!-- 「7」の数字（白） -->
+  <!-- カゴの中に重ならず収まるようにサイズと位置を調整 -->
+  <text x="100" y="117" font-family="Arial, sans-serif" font-size="34" font-weight="bold" fill="white" text-anchor="middle">7</text>
+
+  <!-- 1週間のドット（白） -->
+  <g opacity="0.9">
+    <circle cx="60" cy="165" r="3.5" fill="white" opacity="0.4" />
+    <circle cx="73" cy="173" r="3.5" fill="white" opacity="0.4" />
+    <circle cx="87" cy="178" r="3.5" fill="white" opacity="0.4" />
+    <circle cx="100" cy="180" r="6" fill="white" /> <!-- 今日の強調 -->
+    <circle cx="113" cy="178" r="3.5" fill="white" opacity="0.4" />
+    <circle cx="127" cy="173" r="3.5" fill="white" opacity="0.4" />
+    <circle cx="140" cy="165" r="3.5" fill="white" opacity="0.4" />
+  </g>
+</svg>
