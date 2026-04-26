@@ -186,9 +186,7 @@ class _DailyMemoEditorState extends State<DailyMemoEditor> {
     }
 
     _queuedMemoText = memoText;
-    if (_saveLoop == null) {
-      _saveLoop = _drainSaveQueue();
-    }
+    _saveLoop ??= _drainSaveQueue();
   }
 
   Future<void> _drainSaveQueue() async {

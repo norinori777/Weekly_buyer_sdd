@@ -95,11 +95,13 @@ class _VoiceInputSheetState extends State<_VoiceInputSheet> {
           }
         },
         onSoundLevelChange: (_) {},
-        partialResults: true,
         localeId: 'ja_JP',
         listenFor: const Duration(seconds: 30),
         pauseFor: const Duration(seconds: 3),
-        cancelOnError: true,
+        listenOptions: speech_to_text.SpeechListenOptions(
+          partialResults: true,
+          cancelOnError: true,
+        ),
       );
 
       if (!mounted) {
