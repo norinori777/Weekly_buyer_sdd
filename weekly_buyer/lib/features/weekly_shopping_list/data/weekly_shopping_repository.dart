@@ -119,6 +119,34 @@ class WeeklyShoppingRepository {
         );
   }
 
+    Future<void> updateMealMenuEntry({
+      required int entryId,
+      required String menuText,
+    }) async {
+      final normalizedText = menuText.trim();
+      if (normalizedText.isEmpty) {
+        return;
+      }
+
+      await _database.transaction(() async {
+        final row = await (_database.select(_database.mealMenuEntries)
+              ..where((table) => table.id.equals(entryId)))
+            .getSingleOrNull();
+        if (row == null) {
+          return;
+        }
+
+        await (_database.update(_database.mealMenuEntries)
+              ..where((table) => table.id.equals(entryId)))
+            .write(
+          MealMenuEntriesCompanion(
+            menuText: Value(normalizedText),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
+      });
+    }
+
   Future<void> deleteMealMenuEntry(int entryId) async {
     await _database.transaction(() async {
       final row = await (_database.select(_database.mealMenuEntries)
