@@ -524,9 +524,7 @@ class WeeklyShoppingRepository {
         .map(
           (section) => ShoppingSectionItems(
             section: section,
-            items: entries
-                .where((item) => item.section == section && !item.isPurchased)
-                .toList(),
+            items: entries.where((item) => item.section == section).toList(),
           ),
         )
         .toList();
@@ -538,9 +536,7 @@ class WeeklyShoppingRepository {
             items: entries
                 .where(
                   (item) =>
-                      item.weekday == selectedWeekday &&
-                      item.section == section &&
-                      !item.isPurchased,
+                      item.weekday == selectedWeekday && item.section == section,
                 )
                 .toList(),
           ),

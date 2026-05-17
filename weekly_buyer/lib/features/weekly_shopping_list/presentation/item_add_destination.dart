@@ -320,6 +320,10 @@ class _SectionPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final purchasedColor = Theme.of(context).colorScheme.primary;
+    final normalTitleStyle = Theme.of(context).textTheme.titleMedium;
+    final normalSubtitleStyle = Theme.of(context).textTheme.bodyMedium;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -358,8 +362,18 @@ class _SectionPreviewCard extends StatelessWidget {
                     horizontal: 0,
                     vertical: 0,
                   ),
-                  title: Text(item.name),
-                  subtitle: Text('数量 ${item.quantity}'),
+                  title: Text(
+                    item.name,
+                    style: normalTitleStyle?.copyWith(
+                      color: item.isPurchased ? purchasedColor : normalTitleStyle.color,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '数量 ${item.quantity}',
+                    style: normalSubtitleStyle?.copyWith(
+                      color: item.isPurchased ? purchasedColor : normalSubtitleStyle.color,
+                    ),
+                  ),
                   trailing: IconButton(
                     tooltip: '削除',
                     onPressed: isReadOnly ? null : () => onDeleteItem(item),
