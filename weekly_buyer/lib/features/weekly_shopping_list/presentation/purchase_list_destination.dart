@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers.dart';
 import '../../../app/widgets/weekly_buyer_brand_icon.dart';
 import '../domain/weekly_shopping_models.dart';
+import 'item_editor_destination.dart';
 import 'weekly_shopping_page.dart' show UndoBanner;
 
 class PurchaseListDestination extends ConsumerWidget {
@@ -74,6 +75,14 @@ class PurchaseListDestination extends ConsumerWidget {
                 _CategoryGroupCard(
                   group: group,
                   isReadOnly: isReadOnly,
+                  onRegisterUncategorized: (item) => _registerUncategorizedItem(
+                    context: context,
+                    ref: ref,
+                    selectedDate: selectedDate,
+                    isReadOnly: isReadOnly,
+                    categories: data.categories,
+                    item: item,
+                  ),
                   onTogglePurchased: (item) async {
                     if (isReadOnly) {
                       return;
@@ -114,17 +123,75 @@ class PurchaseListDestination extends ConsumerWidget {
       bottomNavigationBar: bottomBanner,
     );
   }
+
+  Future<void> _registerUncategorizedItem({
+    required BuildContext context,
+    required WidgetRef ref,
+    required DateTime selectedDate,
+    required bool isReadOnly,
+    required List<CategoryEntry> categories,
+    required ShoppingItemEntry item,
+  }) async {
+    if (isReadOnly) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    if (categories.isEmpty) {
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(content: Text('先にカテゴリを追加してください。')),
+        );
+      return;
+    }
+
+    final request = await showItemEditorSheet(
+      context: context,
+      categories: categories,
+      title: '商品マスターに登録',
+      initialName: item.name,
+      initialCategoryId: categories.first.id,
+      submitLabel: '登録',
+      allowUncategorizedCategory: false,
+    );
+
+    if (request == null) {
+      return;
+    }
+
+    final repository = ref.read(weeklyShoppingRepositoryProvider);
+    await repository.registerUncategorizedPurchaseItem(
+      weeklyListItemId: item.id,
+      name: request.name,
+      hiragana: request.hiragana,
+      categoryId: request.categoryId!,
+    );
+
+    ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
+    if (!context.mounted) {
+      return;
+    }
+
+    messenger
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(content: Text('${request.name} を商品マスターに登録しました')),
+      );
+  }
 }
 
 class _CategoryGroupCard extends StatelessWidget {
   const _CategoryGroupCard({
     required this.group,
     required this.isReadOnly,
+    required this.onRegisterUncategorized,
     required this.onTogglePurchased,
   });
 
   final ShoppingCategoryGroup group;
   final bool isReadOnly;
+  final Future<void> Function(ShoppingItemEntry) onRegisterUncategorized;
   final Future<void> Function(ShoppingItemEntry) onTogglePurchased;
 
   @override
@@ -184,6 +251,7 @@ class _CategoryGroupCard extends StatelessWidget {
                   child: _PurchaseItemTile(
                     item: item,
                     isReadOnly: false,
+                    onLongPress: item.categoryId == null ? () => onRegisterUncategorized(item) : null,
                     onTogglePurchased: () => onTogglePurchased(item),
                   ),
                 ),
@@ -200,11 +268,13 @@ class _PurchaseItemTile extends StatelessWidget {
   const _PurchaseItemTile({
     required this.item,
     required this.isReadOnly,
+    this.onLongPress,
     required this.onTogglePurchased,
   });
 
   final ShoppingItemEntry item;
   final bool isReadOnly;
+  final VoidCallback? onLongPress;
   final VoidCallback onTogglePurchased;
 
   @override
@@ -216,6 +286,7 @@ class _PurchaseItemTile extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         title: Text(item.name),
         subtitle: Text('数量 ${item.quantity}'),
+        onLongPress: onLongPress,
         trailing: IconButton(
           onPressed: isReadOnly ? null : onTogglePurchased,
           icon: const Icon(Icons.check_circle_outline),
