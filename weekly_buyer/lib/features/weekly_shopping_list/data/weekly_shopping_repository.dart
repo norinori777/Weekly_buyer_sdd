@@ -119,6 +119,34 @@ class WeeklyShoppingRepository {
         );
   }
 
+    Future<void> updateMealMenuEntry({
+      required int entryId,
+      required String menuText,
+    }) async {
+      final normalizedText = menuText.trim();
+      if (normalizedText.isEmpty) {
+        return;
+      }
+
+      await _database.transaction(() async {
+        final row = await (_database.select(_database.mealMenuEntries)
+              ..where((table) => table.id.equals(entryId)))
+            .getSingleOrNull();
+        if (row == null) {
+          return;
+        }
+
+        await (_database.update(_database.mealMenuEntries)
+              ..where((table) => table.id.equals(entryId)))
+            .write(
+          MealMenuEntriesCompanion(
+            menuText: Value(normalizedText),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
+      });
+    }
+
   Future<void> deleteMealMenuEntry(int entryId) async {
     await _database.transaction(() async {
       final row = await (_database.select(_database.mealMenuEntries)
@@ -342,6 +370,68 @@ class WeeklyShoppingRepository {
     });
   }
 
+  Future<void> registerUncategorizedPurchaseItem({
+    required int weeklyListItemId,
+    required String name,
+    required String hiragana,
+    required int categoryId,
+  }) async {
+    final normalizedName = name.trim();
+    if (normalizedName.isEmpty) {
+      throw ArgumentError.value(name, 'name', '商品名は必須です');
+    }
+    final normalizedHiragana = hiragana.trim();
+    if (normalizedHiragana.isEmpty) {
+      throw ArgumentError.value(hiragana, 'hiragana', 'ひらがなは必須です');
+    }
+
+    await _database.transaction(() async {
+      final existingCandidate = await _findCandidateByName(normalizedName);
+
+      if (existingCandidate == null) {
+        final created = await _database.into(_database.itemMasters).insertReturning(
+              ItemMastersCompanion.insert(
+                name: normalizedName,
+                hiragana: Value(normalizedHiragana),
+                categoryId: Value(categoryId),
+                defaultQuantity: const Value(1),
+              ),
+            );
+        await (_database.update(
+          _database.weeklyListItems,
+        )..where((table) => table.id.equals(weeklyListItemId))).write(
+          WeeklyListItemsCompanion(
+            itemMasterId: Value(created.id),
+            categoryId: Value(categoryId),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
+        return;
+      }
+
+      await (_database.update(
+        _database.itemMasters,
+      )..where((table) => table.id.equals(existingCandidate.id))).write(
+        ItemMastersCompanion(
+          name: Value(normalizedName),
+          hiragana: Value(normalizedHiragana),
+          categoryId: Value(categoryId),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+      await (_database.update(
+        _database.weeklyListItems,
+      )..where((table) => table.id.equals(weeklyListItemId))).write(
+        WeeklyListItemsCompanion(
+          itemMasterId: Value(existingCandidate.id),
+          categoryId: Value(categoryId),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+    });
+  }
+
   Future<void> deleteItemMaster(
     int itemId, {
     DateTime? referenceDate,
@@ -434,9 +524,7 @@ class WeeklyShoppingRepository {
         .map(
           (section) => ShoppingSectionItems(
             section: section,
-            items: entries
-                .where((item) => item.section == section && !item.isPurchased)
-                .toList(),
+            items: entries.where((item) => item.section == section).toList(),
           ),
         )
         .toList();
@@ -448,9 +536,7 @@ class WeeklyShoppingRepository {
             items: entries
                 .where(
                   (item) =>
-                      item.weekday == selectedWeekday &&
-                      item.section == section &&
-                      !item.isPurchased,
+                      item.weekday == selectedWeekday && item.section == section,
                 )
                 .toList(),
           ),

@@ -99,6 +99,24 @@ class ItemAddDestination extends ConsumerWidget {
                           ref: ref,
                           selectedDate: selectedDate,
                           section: mealSection,
+                          initialText: '',
+                          title: '${mealSection.label}の料理メニュー追加',
+                          submitLabel: '登録する',
+                        );
+                      },
+                      onEditMealMenuEntry: (entry) async {
+                        if (isReadOnly) {
+                          return;
+                        }
+                        await _openMealMenuSheet(
+                          context: context,
+                          ref: ref,
+                          selectedDate: selectedDate,
+                          section: entry.section,
+                          initialText: entry.menuText,
+                          title: '${entry.section.label}の料理メニューを編集',
+                          submitLabel: '更新する',
+                          entryId: entry.id,
                         );
                       },
                       onDeleteMealMenuEntry: (entry) async {
@@ -226,6 +244,10 @@ class ItemAddDestination extends ConsumerWidget {
     required WidgetRef ref,
     required DateTime selectedDate,
     required MealSection section,
+    required String initialText,
+    required String title,
+    required String submitLabel,
+    int? entryId,
   }) async {
     final menuText = await showModalBottomSheet<String>(
       context: context,
@@ -242,6 +264,9 @@ class ItemAddDestination extends ConsumerWidget {
           child: SingleChildScrollView(
             child: MealMenuAddSheet(
               section: section,
+              initialText: initialText,
+              title: title,
+              submitLabel: submitLabel,
               onCancel: () => Navigator.of(sheetContext).pop(),
               onSubmit: (value) => Navigator.of(sheetContext).pop(value),
             ),
@@ -254,11 +279,19 @@ class ItemAddDestination extends ConsumerWidget {
       return;
     }
 
-    await ref.read(weeklyShoppingRepositoryProvider).saveMealMenuEntry(
-          referenceDate: selectedDate,
-          section: section,
-          menuText: menuText,
-        );
+    final repository = ref.read(weeklyShoppingRepositoryProvider);
+    if (entryId == null) {
+      await repository.saveMealMenuEntry(
+        referenceDate: selectedDate,
+        section: section,
+        menuText: menuText,
+      );
+    } else {
+      await repository.updateMealMenuEntry(
+        entryId: entryId,
+        menuText: menuText,
+      );
+    }
     ref.invalidate(mealMenuSnapshotProvider(selectedDate));
   }
 }
@@ -272,6 +305,7 @@ class _SectionPreviewCard extends StatelessWidget {
     required this.isReadOnly,
     required this.onDeleteItem,
     required this.onAddMealMenuEntry,
+    required this.onEditMealMenuEntry,
     required this.onDeleteMealMenuEntry,
   });
 
@@ -281,10 +315,15 @@ class _SectionPreviewCard extends StatelessWidget {
   final bool isReadOnly;
   final Future<void> Function(ShoppingItemEntry item) onDeleteItem;
   final Future<void> Function(MealSection section) onAddMealMenuEntry;
+  final Future<void> Function(MealMenuEntry entry) onEditMealMenuEntry;
   final Future<void> Function(MealMenuEntry entry) onDeleteMealMenuEntry;
 
   @override
   Widget build(BuildContext context) {
+    final purchasedColor = Theme.of(context).colorScheme.primary;
+    final normalTitleStyle = Theme.of(context).textTheme.titleMedium;
+    final normalSubtitleStyle = Theme.of(context).textTheme.bodyMedium;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -323,8 +362,18 @@ class _SectionPreviewCard extends StatelessWidget {
                     horizontal: 0,
                     vertical: 0,
                   ),
-                  title: Text(item.name),
-                  subtitle: Text('数量 ${item.quantity}'),
+                  title: Text(
+                    item.name,
+                    style: normalTitleStyle?.copyWith(
+                      color: item.isPurchased ? purchasedColor : normalTitleStyle.color,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '数量 ${item.quantity}',
+                    style: normalSubtitleStyle?.copyWith(
+                      color: item.isPurchased ? purchasedColor : normalSubtitleStyle.color,
+                    ),
+                  ),
                   trailing: IconButton(
                     tooltip: '削除',
                     onPressed: isReadOnly ? null : () => onDeleteItem(item),
@@ -363,6 +412,12 @@ class _SectionPreviewCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(child: Text(entry.menuText)),
+                      IconButton(
+                        tooltip: '編集',
+                        onPressed: isReadOnly ? null : () => onEditMealMenuEntry(entry),
+                        icon: const Icon(Icons.edit_outlined),
+                        visualDensity: VisualDensity.compact,
+                      ),
                       IconButton(
                         tooltip: '削除',
                         onPressed: isReadOnly
