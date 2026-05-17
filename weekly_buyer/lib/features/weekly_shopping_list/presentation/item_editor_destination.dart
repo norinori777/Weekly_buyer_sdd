@@ -17,10 +17,12 @@ class ItemEditorRequest {
 Future<ItemEditorRequest?> showItemEditorSheet({
   required BuildContext context,
   required List<CategoryEntry> categories,
+  String title = '商品を編集',
   String initialName = '',
   String initialHiragana = '',
   int? initialCategoryId,
   String submitLabel = '保存',
+  bool allowUncategorizedCategory = true,
 }) {
   return showModalBottomSheet<ItemEditorRequest>(
     context: context,
@@ -36,10 +38,12 @@ Future<ItemEditorRequest?> showItemEditorSheet({
         ),
         child: ItemEditorSheet(
           categories: categories,
+          title: title,
           initialName: initialName,
           initialHiragana: initialHiragana,
           initialCategoryId: initialCategoryId,
           submitLabel: submitLabel,
+          allowUncategorizedCategory: allowUncategorizedCategory,
           onCancel: () => Navigator.of(sheetContext).pop(),
           onSubmit: (request) => Navigator.of(sheetContext).pop(request),
         ),
@@ -53,20 +57,24 @@ class ItemEditorSheet extends StatefulWidget {
     super.key,
     required this.categories,
     required this.onSubmit,
+    required this.title,
     this.onCancel,
     this.initialName = '',
     this.initialHiragana = '',
     this.initialCategoryId,
     this.submitLabel = '保存',
+    this.allowUncategorizedCategory = true,
   });
 
   final List<CategoryEntry> categories;
+  final String title;
   final String initialName;
   final String initialHiragana;
   final int? initialCategoryId;
   final ValueChanged<ItemEditorRequest> onSubmit;
   final VoidCallback? onCancel;
   final String submitLabel;
+  final bool allowUncategorizedCategory;
 
   @override
   State<ItemEditorSheet> createState() => _ItemEditorSheetState();
@@ -113,7 +121,11 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       return widget.initialCategoryId;
     }
 
-    return widget.categories.isEmpty ? null : widget.categories.first.id;
+    if (widget.categories.isEmpty) {
+      return null;
+    }
+
+    return widget.categories.first.id;
   }
 
   @override
@@ -122,7 +134,7 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('商品を編集', style: Theme.of(context).textTheme.titleLarge),
+        Text(widget.title, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
         TextField(
           controller: _nameController,
@@ -134,26 +146,30 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
           decoration: const InputDecoration(labelText: 'ひらがな'),
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<int?>(
-          initialValue: _selectedCategoryId,
-          decoration: const InputDecoration(labelText: 'カテゴリ'),
-          items: [
-            const DropdownMenuItem<int?>(
-              value: null,
-              child: Text('未分類'),
-            ),
-            for (final category in widget.categories)
-              DropdownMenuItem<int?>(
-                value: category.id,
-                child: Text(category.name),
-              ),
-          ],
-          onChanged: (value) {
-            setState(() {
-              _selectedCategoryId = value;
-            });
-          },
-        ),
+        if (!widget.allowUncategorizedCategory && widget.categories.isEmpty)
+          const Text('先にカテゴリを追加してください。')
+        else
+          DropdownButtonFormField<int?>(
+            initialValue: _selectedCategoryId,
+            decoration: const InputDecoration(labelText: 'カテゴリ'),
+            items: [
+              if (widget.allowUncategorizedCategory)
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('未分類'),
+                ),
+              for (final category in widget.categories)
+                DropdownMenuItem<int?>(
+                  value: category.id,
+                  child: Text(category.name),
+                ),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _selectedCategoryId = value;
+              });
+            },
+          ),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -168,7 +184,10 @@ class _ItemEditorSheetState extends State<ItemEditorSheet> {
             ],
             Expanded(
               child: FilledButton(
-                onPressed: () {
+                onPressed: (!widget.allowUncategorizedCategory &&
+                        (_selectedCategoryId == null || widget.categories.isEmpty))
+                    ? null
+                    : () {
                   final name = _nameController.text.trim();
                   if (name.isEmpty) {
                     return;

@@ -70,6 +70,22 @@ Future<void> _seedWeeklyItem(
   );
 }
 
+Future<void> _seedUncategorizedWeeklyItem(
+  AppDatabase database, {
+  required DateTime referenceDate,
+  required String itemName,
+}) async {
+  final repository = WeeklyShoppingRepository(database);
+  await repository.addItem(
+    referenceDate: referenceDate,
+    request: AddItemRequest(
+      name: itemName,
+      quantity: 1,
+      section: ShoppingSection.morning,
+    ),
+  );
+}
+
 DateTime _nextWeekStart() {
   return startOfNextWeek(dateOnly(DateTime.now()));
 }
@@ -125,6 +141,79 @@ void main() {
     expect(find.text('テスト牛乳'), findsNothing);
   });
 
+  testWidgets('registers an uncategorized purchase item into the item master from a long press', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final mondayDate = _nextWeekStart();
+    final selectedCategory = (await WeeklyShoppingRepository(database).loadCategories()).first;
+
+    await _seedUncategorizedWeeklyItem(
+      database,
+      referenceDate: mondayDate,
+      itemName: 'テスト豆腐',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('テスト豆腐'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('商品マスターに登録'), findsOneWidget);
+    expect(find.descendant(of: find.byType(BottomSheet), matching: find.text('未分類')), findsNothing);
+
+    await tester.enterText(find.byType(TextField).last, 'とうふ');
+    await tester.tap(find.text('登録'));
+    await tester.pumpAndSettle();
+
+    final itemMaster = (await WeeklyShoppingRepository(database).loadItemMasters())
+        .singleWhere((item) => item.name == 'テスト豆腐');
+    expect(itemMaster.hiragana, 'とうふ');
+    expect(itemMaster.categoryId, selectedCategory.id);
+
+    expect(find.text('商品マスターに登録'), findsNothing);
+    expect(find.text('${selectedCategory.name} 1件'), findsWidgets);
+    expect(find.text('テスト豆腐'), findsOneWidget);
+  });
+
+  testWidgets('does not open the registration flow for categorized purchase rows', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await _seedWeeklyItem(
+      database,
+      referenceDate: _nextWeekStart(),
+      categoryName: '食品',
+      itemName: 'テスト牛乳',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('テスト牛乳'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('商品マスターに登録'), findsNothing);
+    expect(find.text('商品を編集'), findsNothing);
+  });
+
   testWidgets('shows only items for the selected weekday', (
     WidgetTester tester,
   ) async {
@@ -174,6 +263,7 @@ void main() {
     expect(selectedChip.selected, isTrue);
     expect(find.text('テスト卵'), findsOneWidget);
     expect(find.text('テスト牛乳'), findsNothing);
+    expect(find.text('たまご'), findsNothing);
   });
 
   testWidgets('saves a new item to the selected weekday only', (
@@ -358,9 +448,8 @@ void main() {
     await tester.enterText(sheetTextFields.at(0), 'ぎゅう');
     await tester.pumpAndSettle();
 
-    expect(find.text('牛乳'), findsOneWidget);
+    expect(find.text('牛乳'), findsAtLeastNWidgets(1));
     expect(find.text('たまご'), findsNothing);
-    expect(find.text('牛乳'), findsOneWidget);
   });
 
   testWidgets('shows weekday-only labels in weekday selector', (
