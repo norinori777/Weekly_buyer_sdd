@@ -39,11 +39,17 @@ class MealMenuAddSheet extends StatefulWidget {
   const MealMenuAddSheet({
     super.key,
     required this.section,
+    required this.initialText,
+    required this.title,
+    required this.submitLabel,
     required this.onSubmit,
     this.onCancel,
   });
 
   final MealSection section;
+  final String initialText;
+  final String title;
+  final String submitLabel;
   final ValueChanged<String> onSubmit;
   final VoidCallback? onCancel;
 
@@ -58,7 +64,7 @@ class _MealMenuAddSheetState extends State<MealMenuAddSheet> {
   @override
   void initState() {
     super.initState();
-    _menuController = TextEditingController();
+    _menuController = TextEditingController(text: widget.initialText);
   }
 
   @override
@@ -103,7 +109,7 @@ class _MealMenuAddSheetState extends State<MealMenuAddSheet> {
           children: [
             Expanded(
               child: Text(
-                '${widget.section.label}の料理メニュー追加',
+                widget.title,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
@@ -134,7 +140,7 @@ class _MealMenuAddSheetState extends State<MealMenuAddSheet> {
           width: double.infinity,
           child: FilledButton(
             onPressed: canSubmit ? _submit : null,
-            child: Text(_isSaving ? '登録中...' : '登録する'),
+            child: Text(_isSaving ? '処理中...' : widget.submitLabel),
           ),
         ),
       ],
