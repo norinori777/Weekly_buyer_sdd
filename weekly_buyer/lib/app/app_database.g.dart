@@ -1370,6 +1370,17 @@ class $WeeklyListItemsTable extends WeeklyListItems
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _purchaseDateMeta = const VerificationMeta(
+    'purchaseDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> purchaseDate = GeneratedColumn<DateTime>(
+    'purchase_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
   );
@@ -1431,6 +1442,7 @@ class $WeeklyListItemsTable extends WeeklyListItems
     quantity,
     isPurchased,
     purchasedAt,
+    purchaseDate,
     sortOrder,
     categoryId,
     createdAt,
@@ -1520,6 +1532,15 @@ class $WeeklyListItemsTable extends WeeklyListItems
         ),
       );
     }
+    if (data.containsKey('purchase_date')) {
+      context.handle(
+        _purchaseDateMeta,
+        purchaseDate.isAcceptableOrUnknown(
+          data['purchase_date']!,
+          _purchaseDateMeta,
+        ),
+      );
+    }
     if (data.containsKey('sort_order')) {
       context.handle(
         _sortOrderMeta,
@@ -1589,6 +1610,10 @@ class $WeeklyListItemsTable extends WeeklyListItems
         DriftSqlType.dateTime,
         data['${effectivePrefix}purchased_at'],
       ),
+      purchaseDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}purchase_date'],
+      ),
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
@@ -1624,6 +1649,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
   final int quantity;
   final bool isPurchased;
   final DateTime? purchasedAt;
+  final DateTime? purchaseDate;
   final int sortOrder;
   final int? categoryId;
   final DateTime createdAt;
@@ -1638,6 +1664,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
     required this.quantity,
     required this.isPurchased,
     this.purchasedAt,
+    this.purchaseDate,
     required this.sortOrder,
     this.categoryId,
     required this.createdAt,
@@ -1658,6 +1685,9 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
     map['is_purchased'] = Variable<bool>(isPurchased);
     if (!nullToAbsent || purchasedAt != null) {
       map['purchased_at'] = Variable<DateTime>(purchasedAt);
+    }
+    if (!nullToAbsent || purchaseDate != null) {
+      map['purchase_date'] = Variable<DateTime>(purchaseDate);
     }
     map['sort_order'] = Variable<int>(sortOrder);
     if (!nullToAbsent || categoryId != null) {
@@ -1683,6 +1713,9 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
       purchasedAt: purchasedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(purchasedAt),
+      purchaseDate: purchaseDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(purchaseDate),
       sortOrder: Value(sortOrder),
       categoryId: categoryId == null && nullToAbsent
           ? const Value.absent()
@@ -1707,6 +1740,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
       quantity: serializer.fromJson<int>(json['quantity']),
       isPurchased: serializer.fromJson<bool>(json['isPurchased']),
       purchasedAt: serializer.fromJson<DateTime?>(json['purchasedAt']),
+      purchaseDate: serializer.fromJson<DateTime?>(json['purchaseDate']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
       categoryId: serializer.fromJson<int?>(json['categoryId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -1726,6 +1760,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
       'quantity': serializer.toJson<int>(quantity),
       'isPurchased': serializer.toJson<bool>(isPurchased),
       'purchasedAt': serializer.toJson<DateTime?>(purchasedAt),
+      'purchaseDate': serializer.toJson<DateTime?>(purchaseDate),
       'sortOrder': serializer.toJson<int>(sortOrder),
       'categoryId': serializer.toJson<int?>(categoryId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1743,6 +1778,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
     int? quantity,
     bool? isPurchased,
     Value<DateTime?> purchasedAt = const Value.absent(),
+    Value<DateTime?> purchaseDate = const Value.absent(),
     int? sortOrder,
     Value<int?> categoryId = const Value.absent(),
     DateTime? createdAt,
@@ -1757,6 +1793,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
     quantity: quantity ?? this.quantity,
     isPurchased: isPurchased ?? this.isPurchased,
     purchasedAt: purchasedAt.present ? purchasedAt.value : this.purchasedAt,
+    purchaseDate: purchaseDate.present ? purchaseDate.value : this.purchaseDate,
     sortOrder: sortOrder ?? this.sortOrder,
     categoryId: categoryId.present ? categoryId.value : this.categoryId,
     createdAt: createdAt ?? this.createdAt,
@@ -1783,6 +1820,9 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
       purchasedAt: data.purchasedAt.present
           ? data.purchasedAt.value
           : this.purchasedAt,
+      purchaseDate: data.purchaseDate.present
+          ? data.purchaseDate.value
+          : this.purchaseDate,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       categoryId: data.categoryId.present
           ? data.categoryId.value
@@ -1804,6 +1844,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
           ..write('quantity: $quantity, ')
           ..write('isPurchased: $isPurchased, ')
           ..write('purchasedAt: $purchasedAt, ')
+          ..write('purchaseDate: $purchaseDate, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('categoryId: $categoryId, ')
           ..write('createdAt: $createdAt, ')
@@ -1823,6 +1864,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
     quantity,
     isPurchased,
     purchasedAt,
+    purchaseDate,
     sortOrder,
     categoryId,
     createdAt,
@@ -1841,6 +1883,7 @@ class WeeklyListItem extends DataClass implements Insertable<WeeklyListItem> {
           other.quantity == this.quantity &&
           other.isPurchased == this.isPurchased &&
           other.purchasedAt == this.purchasedAt &&
+          other.purchaseDate == this.purchaseDate &&
           other.sortOrder == this.sortOrder &&
           other.categoryId == this.categoryId &&
           other.createdAt == this.createdAt &&
@@ -1857,6 +1900,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
   final Value<int> quantity;
   final Value<bool> isPurchased;
   final Value<DateTime?> purchasedAt;
+  final Value<DateTime?> purchaseDate;
   final Value<int> sortOrder;
   final Value<int?> categoryId;
   final Value<DateTime> createdAt;
@@ -1871,6 +1915,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
     this.quantity = const Value.absent(),
     this.isPurchased = const Value.absent(),
     this.purchasedAt = const Value.absent(),
+    this.purchaseDate = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1886,6 +1931,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
     this.quantity = const Value.absent(),
     this.isPurchased = const Value.absent(),
     this.purchasedAt = const Value.absent(),
+    this.purchaseDate = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1903,6 +1949,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
     Expression<int>? quantity,
     Expression<bool>? isPurchased,
     Expression<DateTime>? purchasedAt,
+    Expression<DateTime>? purchaseDate,
     Expression<int>? sortOrder,
     Expression<int>? categoryId,
     Expression<DateTime>? createdAt,
@@ -1918,6 +1965,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
       if (quantity != null) 'quantity': quantity,
       if (isPurchased != null) 'is_purchased': isPurchased,
       if (purchasedAt != null) 'purchased_at': purchasedAt,
+      if (purchaseDate != null) 'purchase_date': purchaseDate,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (categoryId != null) 'category_id': categoryId,
       if (createdAt != null) 'created_at': createdAt,
@@ -1935,6 +1983,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
     Value<int>? quantity,
     Value<bool>? isPurchased,
     Value<DateTime?>? purchasedAt,
+    Value<DateTime?>? purchaseDate,
     Value<int>? sortOrder,
     Value<int?>? categoryId,
     Value<DateTime>? createdAt,
@@ -1950,6 +1999,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
       quantity: quantity ?? this.quantity,
       isPurchased: isPurchased ?? this.isPurchased,
       purchasedAt: purchasedAt ?? this.purchasedAt,
+      purchaseDate: purchaseDate ?? this.purchaseDate,
       sortOrder: sortOrder ?? this.sortOrder,
       categoryId: categoryId ?? this.categoryId,
       createdAt: createdAt ?? this.createdAt,
@@ -1987,6 +2037,9 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
     if (purchasedAt.present) {
       map['purchased_at'] = Variable<DateTime>(purchasedAt.value);
     }
+    if (purchaseDate.present) {
+      map['purchase_date'] = Variable<DateTime>(purchaseDate.value);
+    }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
@@ -2014,6 +2067,7 @@ class WeeklyListItemsCompanion extends UpdateCompanion<WeeklyListItem> {
           ..write('quantity: $quantity, ')
           ..write('isPurchased: $isPurchased, ')
           ..write('purchasedAt: $purchasedAt, ')
+          ..write('purchaseDate: $purchaseDate, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('categoryId: $categoryId, ')
           ..write('createdAt: $createdAt, ')
@@ -4911,6 +4965,7 @@ typedef $$WeeklyListItemsTableCreateCompanionBuilder =
       Value<int> quantity,
       Value<bool> isPurchased,
       Value<DateTime?> purchasedAt,
+      Value<DateTime?> purchaseDate,
       Value<int> sortOrder,
       Value<int?> categoryId,
       Value<DateTime> createdAt,
@@ -4927,6 +4982,7 @@ typedef $$WeeklyListItemsTableUpdateCompanionBuilder =
       Value<int> quantity,
       Value<bool> isPurchased,
       Value<DateTime?> purchasedAt,
+      Value<DateTime?> purchaseDate,
       Value<int> sortOrder,
       Value<int?> categoryId,
       Value<DateTime> createdAt,
@@ -5047,6 +5103,11 @@ class $$WeeklyListItemsTableFilterComposer
 
   ColumnFilters<DateTime> get purchasedAt => $composableBuilder(
     column: $table.purchasedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get purchaseDate => $composableBuilder(
+    column: $table.purchaseDate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5179,6 +5240,11 @@ class $$WeeklyListItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get purchaseDate => $composableBuilder(
+    column: $table.purchaseDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
@@ -5297,6 +5363,11 @@ class $$WeeklyListItemsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get purchasedAt => $composableBuilder(
     column: $table.purchasedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get purchaseDate => $composableBuilder(
+    column: $table.purchaseDate,
     builder: (column) => column,
   );
 
@@ -5422,6 +5493,7 @@ class $$WeeklyListItemsTableTableManager
                 Value<int> quantity = const Value.absent(),
                 Value<bool> isPurchased = const Value.absent(),
                 Value<DateTime?> purchasedAt = const Value.absent(),
+                Value<DateTime?> purchaseDate = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int?> categoryId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -5436,6 +5508,7 @@ class $$WeeklyListItemsTableTableManager
                 quantity: quantity,
                 isPurchased: isPurchased,
                 purchasedAt: purchasedAt,
+                purchaseDate: purchaseDate,
                 sortOrder: sortOrder,
                 categoryId: categoryId,
                 createdAt: createdAt,
@@ -5452,6 +5525,7 @@ class $$WeeklyListItemsTableTableManager
                 Value<int> quantity = const Value.absent(),
                 Value<bool> isPurchased = const Value.absent(),
                 Value<DateTime?> purchasedAt = const Value.absent(),
+                Value<DateTime?> purchaseDate = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int?> categoryId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -5466,6 +5540,7 @@ class $$WeeklyListItemsTableTableManager
                 quantity: quantity,
                 isPurchased: isPurchased,
                 purchasedAt: purchasedAt,
+                purchaseDate: purchaseDate,
                 sortOrder: sortOrder,
                 categoryId: categoryId,
                 createdAt: createdAt,

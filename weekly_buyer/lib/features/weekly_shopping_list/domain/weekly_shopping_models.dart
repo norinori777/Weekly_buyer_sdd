@@ -231,6 +231,7 @@ class ShoppingItemEntry {
     required this.categoryId,
     required this.categoryName,
     required this.itemMasterId,
+    this.purchaseDate,
   });
 
   final int id;
@@ -243,8 +244,14 @@ class ShoppingItemEntry {
   final int? categoryId;
   final String? categoryName;
   final int? itemMasterId;
+  final DateTime? purchaseDate;
 
-  ShoppingItemEntry copyWith({bool? isPurchased, int? quantity}) {
+  ShoppingItemEntry copyWith({
+    bool? isPurchased,
+    int? quantity,
+    DateTime? purchaseDate,
+    bool clearPurchaseDate = false,
+  }) {
     return ShoppingItemEntry(
       id: id,
       weekday: weekday,
@@ -256,6 +263,7 @@ class ShoppingItemEntry {
       categoryId: categoryId,
       categoryName: categoryName,
       itemMasterId: itemMasterId,
+      purchaseDate: clearPurchaseDate ? null : (purchaseDate ?? this.purchaseDate),
     );
   }
 }
@@ -300,6 +308,7 @@ class AddItemRequest {
     required this.section,
     this.itemMasterId,
     this.categoryId,
+    this.purchaseDate,
   });
 
   final String name;
@@ -307,6 +316,7 @@ class AddItemRequest {
   final ShoppingSection section;
   final int? itemMasterId;
   final int? categoryId;
+  final DateTime? purchaseDate;
 }
 
 DateTime dateOnly(DateTime value) {
@@ -335,3 +345,5 @@ String formatWeekLabel(WeekRange range) {
 }
 
 String _shortDate(DateTime value) => '${value.month}/${value.day}';
+
+String formatPurchaseDate(DateTime date) => '${date.month}月${date.day}日';

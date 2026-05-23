@@ -285,7 +285,11 @@ class _PurchaseItemTile extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         title: Text(item.name),
-        subtitle: Text('数量 ${item.quantity}'),
+        subtitle: Text(
+          item.purchaseDate != null
+              ? '数量 ${item.quantity}\u3000${formatPurchaseDate(item.purchaseDate!)}'
+              : '数量 ${item.quantity}',
+        ),
         onLongPress: onLongPress,
         trailing: IconButton(
           onPressed: isReadOnly ? null : onTogglePurchased,
