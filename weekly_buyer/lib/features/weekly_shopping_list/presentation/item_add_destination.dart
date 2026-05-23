@@ -369,7 +369,9 @@ class _SectionPreviewCard extends StatelessWidget {
                     ),
                   ),
                   subtitle: Text(
-                    '数量 ${item.quantity}',
+                    item.purchaseDate != null
+                        ? '数量 ${item.quantity}\u3000${formatPurchaseDate(item.purchaseDate!)}'
+                        : '数量 ${item.quantity}',
                     style: normalSubtitleStyle?.copyWith(
                       color: item.isPurchased ? purchasedColor : normalSubtitleStyle.color,
                     ),
