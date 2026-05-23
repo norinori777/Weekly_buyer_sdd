@@ -513,6 +513,7 @@ class WeeklyShoppingRepository {
                 ? null
                 : categoryNames[item.categoryId!],
             itemMasterId: item.itemMasterId,
+            purchaseDate: item.purchaseDate,
           ),
         )
         .toList();
@@ -595,6 +596,7 @@ class WeeklyShoppingRepository {
             quantity: Value(request.quantity),
             categoryId: Value(categoryId),
             sortOrder: Value(nextSortOrder),
+            purchaseDate: Value(request.purchaseDate),
           ),
         );
 
@@ -734,6 +736,7 @@ class WeeklyShoppingRepository {
       categoryId: latest.categoryId,
       categoryName: null,
       itemMasterId: latest.itemMasterId,
+      purchaseDate: latest.purchaseDate,
     );
   }
 

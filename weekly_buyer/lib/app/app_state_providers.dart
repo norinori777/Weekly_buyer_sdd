@@ -15,6 +15,7 @@ class ItemAddDraft {
 		this.section = ShoppingSection.morning,
 		this.selectedCandidateId,
 		this.categoryId,
+		this.purchaseDate,
 	});
 
 	final String name;
@@ -22,6 +23,7 @@ class ItemAddDraft {
 	final ShoppingSection section;
 	final int? selectedCandidateId;
 	final int? categoryId;
+	final DateTime? purchaseDate;
 
 	ItemAddDraft copyWith({
 		String? name,
@@ -29,6 +31,8 @@ class ItemAddDraft {
 		ShoppingSection? section,
 		int? selectedCandidateId,
 		int? categoryId,
+		DateTime? purchaseDate,
+		bool clearPurchaseDate = false,
 	}) {
 		return ItemAddDraft(
 			name: name ?? this.name,
@@ -36,6 +40,7 @@ class ItemAddDraft {
 			section: section ?? this.section,
 			selectedCandidateId: selectedCandidateId ?? this.selectedCandidateId,
 			categoryId: categoryId ?? this.categoryId,
+			purchaseDate: clearPurchaseDate ? null : (purchaseDate ?? this.purchaseDate),
 		);
 	}
 }

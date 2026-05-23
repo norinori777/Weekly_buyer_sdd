@@ -51,6 +51,7 @@ class WeeklyListItems extends Table {
   IntColumn get quantity => integer().withDefault(const Constant(1))();
   BoolColumn get isPurchased => boolean().withDefault(const Constant(false))();
   DateTimeColumn get purchasedAt => dateTime().nullable()();
+  DateTimeColumn get purchaseDate => dateTime().nullable()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   IntColumn get categoryId => integer().nullable().references(
     Categories,
@@ -298,7 +299,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? executor}) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -325,6 +326,9 @@ class AppDatabase extends _$AppDatabase {
         if (!await _hasColumn('item_masters', 'hiragana')) {
           await migrator.addColumn(itemMasters, itemMasters.hiragana);
         }
+      }
+      if (from < 6) {
+        await migrator.addColumn(weeklyListItems, weeklyListItems.purchaseDate);
       }
     },
     beforeOpen: (details) async {

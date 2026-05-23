@@ -472,16 +472,24 @@ class _MealMenuSectionEditorState extends ConsumerState<MealMenuSectionEditor> {
 class _ItemEntryFormState extends ConsumerState<ItemEntryForm> {
   late final TextEditingController _nameController;
   late final TextEditingController _quantityController;
+  late final TextEditingController _purchaseDateController;
   late ShoppingSection _selectedSection;
   ItemCandidate? _selectedCandidate;
   bool _isContinuingAdd = false;
   bool _isListeningForVoice = false;
+  DateTime? _purchaseDate;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialValue.name);
     _quantityController = TextEditingController(text: widget.initialValue.quantityText);
+    _purchaseDate = widget.initialValue.purchaseDate;
+    _purchaseDateController = TextEditingController(
+      text: _purchaseDate != null
+          ? '${_purchaseDate!.month}月${_purchaseDate!.day}日'
+          : '',
+    );
     _selectedSection = widget.initialValue.section;
     _selectedCandidate = _candidateById(widget.initialValue.selectedCandidateId);
   }
@@ -498,6 +506,7 @@ class _ItemEntryFormState extends ConsumerState<ItemEntryForm> {
   void dispose() {
     _nameController.dispose();
     _quantityController.dispose();
+    _purchaseDateController.dispose();
     super.dispose();
   }
 
@@ -506,6 +515,10 @@ class _ItemEntryFormState extends ConsumerState<ItemEntryForm> {
     _quantityController.text = widget.initialValue.quantityText;
     _selectedSection = widget.initialValue.section;
     _selectedCandidate = _candidateById(widget.initialValue.selectedCandidateId);
+    _purchaseDate = widget.initialValue.purchaseDate;
+    _purchaseDateController.text = _purchaseDate != null
+        ? '${_purchaseDate!.month}月${_purchaseDate!.day}日'
+        : '';
   }
 
   ItemCandidate? _candidateById(int? candidateId) {
@@ -569,6 +582,7 @@ class _ItemEntryFormState extends ConsumerState<ItemEntryForm> {
       section: _selectedSection,
       selectedCandidateId: _selectedCandidate?.id,
       categoryId: _selectedCandidate?.categoryId,
+      purchaseDate: _purchaseDate,
     );
   }
 
@@ -586,6 +600,7 @@ class _ItemEntryFormState extends ConsumerState<ItemEntryForm> {
       section: draft.section,
       itemMasterId: draft.selectedCandidateId,
       categoryId: draft.categoryId,
+      purchaseDate: _purchaseDate,
     );
   }
 
@@ -593,6 +608,8 @@ class _ItemEntryFormState extends ConsumerState<ItemEntryForm> {
     setState(() {
       _nameController.clear();
       _quantityController.clear();
+      _purchaseDateController.clear();
+      _purchaseDate = null;
       _selectedCandidate = null;
     });
     _notifyChanged();
@@ -634,6 +651,30 @@ class _ItemEntryFormState extends ConsumerState<ItemEntryForm> {
     }
 
     widget.onSubmit(request);
+  }
+
+  Future<void> _pickPurchaseDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _purchaseDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _purchaseDate = picked;
+        _purchaseDateController.text = '${picked.month}月${picked.day}日';
+      });
+      _notifyChanged();
+    }
+  }
+
+  void _clearPurchaseDate() {
+    setState(() {
+      _purchaseDate = null;
+      _purchaseDateController.clear();
+    });
+    _notifyChanged();
   }
 
   void _selectCandidate(ItemCandidate candidate) {
@@ -733,6 +774,24 @@ class _ItemEntryFormState extends ConsumerState<ItemEntryForm> {
               ),
             ],
           ],
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _purchaseDateController,
+          readOnly: true,
+          showCursor: false,
+          onTap: _pickPurchaseDate,
+          decoration: InputDecoration(
+            labelText: '購入日（任意）',
+            hintText: '日付を選択',
+            suffixIcon: _purchaseDate != null
+                ? IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: '購入日をクリア',
+                    onPressed: _clearPurchaseDate,
+                  )
+                : const Icon(Icons.calendar_today_outlined),
+          ),
         ),
         const SizedBox(height: 16),
         Wrap(
