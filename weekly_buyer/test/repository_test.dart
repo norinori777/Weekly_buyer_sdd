@@ -842,4 +842,122 @@ void main() {
     expect((await repository.searchCandidates('けんさくぎゅうにゅう')).single.id, created.id);
     expect(await repository.searchCandidates('けんさくぎゅうにゅう'), hasLength(1));
   });
+
+  test('items within a category are sorted by hiragana ascending', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    final category = await repository.addCategory('ひらがなソートカテゴリ');
+    final referenceDate = DateTime(2026, 4, 20);
+
+    await repository.addItemMaster(
+      name: 'ブロッコリー',
+      hiragana: 'ぶろっこりー',
+      categoryId: category.id,
+    );
+    await repository.addItemMaster(
+      name: 'あいうえお商品',
+      hiragana: 'あいうえお',
+      categoryId: category.id,
+    );
+    await repository.addItemMaster(
+      name: 'キャベツ',
+      hiragana: 'きゃべつ',
+      categoryId: category.id,
+    );
+
+    await repository.addItem(
+      referenceDate: referenceDate,
+      request: AddItemRequest(
+        name: 'ブロッコリー',
+        quantity: 1,
+        section: ShoppingSection.morning,
+        categoryId: category.id,
+      ),
+    );
+    await repository.addItem(
+      referenceDate: referenceDate,
+      request: AddItemRequest(
+        name: 'あいうえお商品',
+        quantity: 1,
+        section: ShoppingSection.morning,
+        categoryId: category.id,
+      ),
+    );
+    await repository.addItem(
+      referenceDate: referenceDate,
+      request: AddItemRequest(
+        name: 'キャベツ',
+        quantity: 1,
+        section: ShoppingSection.morning,
+        categoryId: category.id,
+      ),
+    );
+    // ひらがなのないアイテム（itemMasterId=null → hiragana=null）
+    await repository.addItem(
+      referenceDate: referenceDate,
+      request: AddItemRequest(
+        name: 'ひらがななし商品',
+        quantity: 1,
+        section: ShoppingSection.morning,
+        categoryId: category.id,
+      ),
+    );
+
+    final snapshot = await repository.loadWeek(referenceDate);
+    final items = snapshot.categoryGroups.single.items;
+
+    expect(items, hasLength(4));
+    expect(items[0].name, 'あいうえお商品');
+    expect(items[1].name, 'キャベツ');
+    expect(items[2].name, 'ブロッコリー');
+    expect(items[3].name, 'ひらがななし商品');
+  });
+
+  test('items with same hiragana are tiebroken by name ascending', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    final category = await repository.addCategory('タイブレークカテゴリ');
+    final referenceDate = DateTime(2026, 4, 20);
+
+    await repository.addItemMaster(
+      name: '商品Z',
+      hiragana: 'あいうえお',
+      categoryId: category.id,
+    );
+    await repository.addItemMaster(
+      name: '商品A',
+      hiragana: 'あいうえお',
+      categoryId: category.id,
+    );
+
+    await repository.addItem(
+      referenceDate: referenceDate,
+      request: AddItemRequest(
+        name: '商品Z',
+        quantity: 1,
+        section: ShoppingSection.morning,
+        categoryId: category.id,
+      ),
+    );
+    await repository.addItem(
+      referenceDate: referenceDate,
+      request: AddItemRequest(
+        name: '商品A',
+        quantity: 1,
+        section: ShoppingSection.morning,
+        categoryId: category.id,
+      ),
+    );
+
+    final snapshot = await repository.loadWeek(referenceDate);
+    final items = snapshot.categoryGroups.single.items;
+
+    expect(items, hasLength(2));
+    expect(items[0].name, '商品A');
+    expect(items[1].name, '商品Z');
+  });
 }
