@@ -488,6 +488,7 @@ class WeeklyShoppingRepository {
       for (final category in categories) category.id: category.name,
     };
     final itemMasters = await _loadItemMasters();
+    final hiraganaByMasterId = <int, String?>{for (final m in itemMasters) m.id: m.hiragana};
 
     final rawItems =
         await (_database.select(_database.weeklyListItems)
@@ -514,6 +515,7 @@ class WeeklyShoppingRepository {
                 : categoryNames[item.categoryId!],
             itemMasterId: item.itemMasterId,
             purchaseDate: item.purchaseDate,
+            hiragana: item.itemMasterId == null ? null : hiraganaByMasterId[item.itemMasterId],
           ),
         )
         .toList();
@@ -999,7 +1001,9 @@ class WeeklyShoppingRepository {
         ShoppingCategoryGroup(
           categoryId: category.key,
           categoryName: category.value,
-          items: List.unmodifiable(items),
+          items: List.unmodifiable(
+            [...items]..sort((a, b) => _sortKeyFor(a).compareTo(_sortKeyFor(b))),
+          ),
         ),
       );
     }
@@ -1010,7 +1014,9 @@ class WeeklyShoppingRepository {
         ShoppingCategoryGroup(
           categoryId: null,
           categoryName: '未分類',
-          items: List.unmodifiable(uncategorizedItems),
+          items: List.unmodifiable(
+            [...uncategorizedItems]..sort((a, b) => _sortKeyFor(a).compareTo(_sortKeyFor(b))),
+          ),
         ),
       );
     }
@@ -1056,6 +1062,19 @@ class WeeklyShoppingRepository {
       (section) => section.name == value,
       orElse: () => ShoppingSection.other,
     );
+  }
+
+  String _normalizeToHiragana(String s) => s.replaceAllMapped(
+        RegExp(r'[\u30a1-\u30f6]'),
+        (m) => String.fromCharCode(m.group(0)!.codeUnitAt(0) - 0x60),
+      );
+
+  String _sortKeyFor(ShoppingItemEntry entry) {
+    final hiragana = entry.hiragana?.trim();
+    if (hiragana == null || hiragana.isEmpty) {
+      return '\uFFFF${entry.name}';
+    }
+    return '${_normalizeToHiragana(hiragana)}\t${entry.name}';
   }
 }
 
