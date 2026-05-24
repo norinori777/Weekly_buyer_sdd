@@ -232,6 +232,7 @@ class ShoppingItemEntry {
     required this.categoryName,
     required this.itemMasterId,
     this.purchaseDate,
+    this.hiragana,
   });
 
   final int id;
@@ -245,12 +246,14 @@ class ShoppingItemEntry {
   final String? categoryName;
   final int? itemMasterId;
   final DateTime? purchaseDate;
+  final String? hiragana;
 
   ShoppingItemEntry copyWith({
     bool? isPurchased,
     int? quantity,
     DateTime? purchaseDate,
     bool clearPurchaseDate = false,
+    String? hiragana,
   }) {
     return ShoppingItemEntry(
       id: id,
@@ -264,6 +267,7 @@ class ShoppingItemEntry {
       categoryName: categoryName,
       itemMasterId: itemMasterId,
       purchaseDate: clearPurchaseDate ? null : (purchaseDate ?? this.purchaseDate),
+      hiragana: hiragana ?? this.hiragana,
     );
   }
 }
