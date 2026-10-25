@@ -685,6 +685,18 @@ class WeeklyShoppingRepository {
     );
   }
 
+  Future<void> unmarkPurchased(int itemId) async {
+    await (_database.update(_database.weeklyListItems)
+          ..where((table) => table.id.equals(itemId) & table.isPurchased.equals(true)))
+        .write(
+      WeeklyListItemsCompanion(
+        isPurchased: const Value(false),
+        purchasedAt: const Value(null),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
   Future<ShoppingItemEntry?> undoLatestPurchase(DateTime referenceDate) async {
     final weekStart = startOfWeek(referenceDate);
     final weeklyList = await (_database.select(
