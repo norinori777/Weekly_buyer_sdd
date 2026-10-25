@@ -1,4 +1,4 @@
-<!-- SPECKIT START -->
+﻿<!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
-shell commands, and other important information, read [specs/029-usage-date-display/plan.md](specs/029-usage-date-display/plan.md)
+shell commands, and other important information, read [specs/031-unmark-purchased-longpress/plan.md](specs/031-unmark-purchased-longpress/plan.md)
 <!-- SPECKIT END -->

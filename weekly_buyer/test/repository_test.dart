@@ -653,6 +653,39 @@ void main() {
     },
   );
 
+  test('unmarkPurchased clears purchase state and is idempotent', () async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final repository = WeeklyShoppingRepository(database);
+    for (final name in ['卵', '牛乳']) {
+      await repository.addItem(
+        referenceDate: DateTime(2026, 4, 22),
+        request: AddItemRequest(
+          name: name,
+          quantity: 1,
+          section: ShoppingSection.other,
+        ),
+      );
+    }
+
+    final items = await database.select(database.weeklyListItems).get();
+    await repository.togglePurchased(items[0].id);
+    await repository.togglePurchased(items[1].id);
+
+    await repository.unmarkPurchased(items[0].id);
+    await repository.unmarkPurchased(items[0].id);
+    await repository.unmarkPurchased(9999);
+
+    final after = await database.select(database.weeklyListItems).get();
+    final first = after.firstWhere((row) => row.id == items[0].id);
+    final second = after.firstWhere((row) => row.id == items[1].id);
+    expect(first.isPurchased, isFalse);
+    expect(first.purchasedAt, isNull);
+    expect(second.isPurchased, isTrue);
+    expect(second.purchasedAt, isNotNull);
+  });
+
   test('updates category order using the persisted sort order', () async {
     final database = AppDatabase(executor: NativeDatabase.memory());
     addTearDown(database.close);

@@ -81,6 +81,35 @@ class ItemAddDestination extends ConsumerWidget {
                       key: ValueKey('section-card-${section.name}-$selectedDate'),
                       section: section,
                       isReadOnly: isReadOnly,
+                      onUnmarkPurchased: (item) async {
+                        if (isReadOnly || !item.isPurchased) {
+                          return;
+                        }
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (dialogContext) => AlertDialog(
+                            title: const Text('購入済みを解除しますか？'),
+                            content: Text('「${item.name}」の購入済みを解除します。'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(dialogContext).pop(false),
+                                child: const Text('いいえ'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.of(dialogContext).pop(true),
+                                child: const Text('はい'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed != true) {
+                          return;
+                        }
+                        await ref
+                            .read(weeklyShoppingRepositoryProvider)
+                            .unmarkPurchased(item.id);
+                        ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
+                      },
                       onDeleteItem: (item) async {
                         if (isReadOnly) {
                           return;
@@ -304,6 +333,7 @@ class _SectionPreviewCard extends StatelessWidget {
     required this.mealMenuEntries,
     required this.isReadOnly,
     required this.onDeleteItem,
+    required this.onUnmarkPurchased,
     required this.onAddMealMenuEntry,
     required this.onEditMealMenuEntry,
     required this.onDeleteMealMenuEntry,
@@ -314,6 +344,7 @@ class _SectionPreviewCard extends StatelessWidget {
   final List<MealMenuEntry> mealMenuEntries;
   final bool isReadOnly;
   final Future<void> Function(ShoppingItemEntry item) onDeleteItem;
+  final Future<void> Function(ShoppingItemEntry item) onUnmarkPurchased;
   final Future<void> Function(MealSection section) onAddMealMenuEntry;
   final Future<void> Function(MealMenuEntry entry) onEditMealMenuEntry;
   final Future<void> Function(MealMenuEntry entry) onDeleteMealMenuEntry;
@@ -362,6 +393,9 @@ class _SectionPreviewCard extends StatelessWidget {
                     horizontal: 0,
                     vertical: 0,
                   ),
+                  onLongPress: item.isPurchased && !isReadOnly
+                      ? () => onUnmarkPurchased(item)
+                      : null,
                   title: Text(
                     item.name,
                     style: normalTitleStyle?.copyWith(
