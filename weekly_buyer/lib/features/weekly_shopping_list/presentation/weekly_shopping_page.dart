@@ -1,3 +1,5 @@
+﻿import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -54,15 +56,12 @@ class _WeeklyShoppingPageState extends ConsumerState<WeeklyShoppingPage> {
                 onReturnToDefaultWeek: isReadOnly ? () => resetSelectedWeekToDefault(ref) : null,
                 isReadOnly: isReadOnly,
               ),
-              if (data.hiddenPurchasedCount > 0 || data.lastPurchasedItem != null) ...[
+              if (!isReadOnly) ...[
                 const SizedBox(height: 16),
-                UndoBanner(
+                PurchaseUndoNoticeHost(
                   hiddenPurchasedCount: data.hiddenPurchasedCount,
-                  lastPurchasedItem: data.lastPurchasedItem,
+                  inline: true,
                   onUndo: () async {
-                    if (isReadOnly) {
-                      return;
-                    }
                     await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase(selectedDate);
                     ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
                   },
@@ -79,26 +78,13 @@ class _WeeklyShoppingPageState extends ConsumerState<WeeklyShoppingPage> {
                     if (isReadOnly) {
                       return;
                     }
-                    final messenger = ScaffoldMessenger.of(context);
                     await ref.read(weeklyShoppingRepositoryProvider).togglePurchased(item.id);
                     ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
                     if (!mounted) {
                       return;
                     }
-                    messenger
-                      ..clearSnackBars()
-                      ..showSnackBar(
-                        SnackBar(
-                          content: Text('${item.name} を購入済みにしました'),
-                          action: SnackBarAction(
-                            label: '元に戻す',
-                            onPressed: () async {
-                              await ref.read(weeklyShoppingRepositoryProvider).undoLatestPurchase(selectedDate);
-                              ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
-                            },
-                          ),
-                        ),
-                      );
+                    ref.read(purchaseUndoNoticeProvider.notifier).state =
+                        PurchaseUndoNotice(itemName: item.name, createdAt: DateTime.now());
                   },
                 ),
                 const SizedBox(height: 12),
@@ -154,21 +140,93 @@ class _WeeklyShoppingPageState extends ConsumerState<WeeklyShoppingPage> {
   }
 }
 
+class PurchaseUndoNoticeHost extends ConsumerStatefulWidget {
+  const PurchaseUndoNoticeHost({
+    super.key,
+    required this.hiddenPurchasedCount,
+    required this.onUndo,
+    this.inline = false,
+  });
+
+  final int hiddenPurchasedCount;
+  final Future<void> Function() onUndo;
+  final bool inline;
+
+  @override
+  ConsumerState<PurchaseUndoNoticeHost> createState() =>
+      PurchaseUndoNoticeHostState();
+}
+
+class PurchaseUndoNoticeHostState
+    extends ConsumerState<PurchaseUndoNoticeHost> {
+  static const _displayDuration = Duration(seconds: 3);
+
+  Timer? _timer;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _clear() {
+    _timer?.cancel();
+    ref.read(purchaseUndoNoticeProvider.notifier).state = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<PurchaseUndoNotice?>(purchaseUndoNoticeProvider, (_, next) {
+      _timer?.cancel();
+      if (next != null) {
+        _timer = Timer(_displayDuration, _clear);
+      }
+    });
+    ref.listen<MainShellDestination>(mainShellDestinationProvider, (_, _) {
+      if (ref.read(purchaseUndoNoticeProvider) != null) {
+        _clear();
+      }
+    });
+
+    final notice = ref.watch(purchaseUndoNoticeProvider);
+    if (notice == null) {
+      return const SizedBox.shrink();
+    }
+
+    final banner = UndoBanner(
+      hiddenPurchasedCount: widget.hiddenPurchasedCount,
+      itemName: notice.itemName,
+      onUndo: () async {
+        _clear();
+        await widget.onUndo();
+      },
+    );
+    if (widget.inline) {
+      return banner;
+    }
+
+    return SafeArea(
+      minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: banner,
+    );
+  }
+}
+
 class UndoBanner extends StatelessWidget {
   const UndoBanner({
     super.key,
     required this.hiddenPurchasedCount,
-    required this.lastPurchasedItem,
+    required this.itemName,
     required this.onUndo,
   });
 
   final int hiddenPurchasedCount;
-  final ShoppingItemEntry? lastPurchasedItem;
+  final String itemName;
   final Future<void> Function() onUndo;
 
   @override
   Widget build(BuildContext context) {
-    final label = lastPurchasedItem == null ? '購入済みの商品があります' : '${lastPurchasedItem!.name} を購入済みにしました';
+    final label = '$itemName を購入済みにしました';
 
     return Material(
       color: Theme.of(context).colorScheme.primaryContainer,
