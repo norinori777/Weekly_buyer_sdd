@@ -22,10 +22,10 @@ enum MealSection { morning, lunch, dinner }
 
 extension MealSectionLabel on MealSection {
   String get label => switch (this) {
-        MealSection.morning => '朝',
-        MealSection.lunch => '昼',
-        MealSection.dinner => '夜',
-      };
+    MealSection.morning => '朝',
+    MealSection.lunch => '昼',
+    MealSection.dinner => '夜',
+  };
 }
 
 enum WeekViewMode { editable, priorWeekReadOnly }
@@ -43,9 +43,11 @@ class WeekViewState {
 
   bool get isReadOnly => selectedWeekStart.isBefore(defaultNextWeekStart);
 
-  WeekViewMode get mode => isReadOnly ? WeekViewMode.priorWeekReadOnly : WeekViewMode.editable;
+  WeekViewMode get mode =>
+      isReadOnly ? WeekViewMode.priorWeekReadOnly : WeekViewMode.editable;
 
-  int get weekOffset => selectedWeekStart.difference(defaultNextWeekStart).inDays ~/ 7;
+  int get weekOffset =>
+      selectedWeekStart.difference(defaultNextWeekStart).inDays ~/ 7;
 
   WeekViewState copyWith({
     DateTime? selectedDate,
@@ -60,11 +62,11 @@ class WeekViewState {
 
 extension ShoppingSectionMealSection on ShoppingSection {
   MealSection? get mealSection => switch (this) {
-        ShoppingSection.morning => MealSection.morning,
-        ShoppingSection.afternoon => MealSection.lunch,
-        ShoppingSection.evening => MealSection.dinner,
-        ShoppingSection.other => null,
-      };
+    ShoppingSection.morning => MealSection.morning,
+    ShoppingSection.afternoon => MealSection.lunch,
+    ShoppingSection.evening => MealSection.dinner,
+    ShoppingSection.other => null,
+  };
 }
 
 class DailyMemoEntry {
@@ -177,7 +179,11 @@ class CategoryNotEmptyException implements Exception {
 }
 
 class ItemInPurchaseWeekException implements Exception {
-  const ItemInPurchaseWeekException(this.itemId, this.weekStart, this.referenceCount);
+  const ItemInPurchaseWeekException(
+    this.itemId,
+    this.weekStart,
+    this.referenceCount,
+  );
 
   final int itemId;
   final DateTime weekStart;
@@ -266,7 +272,9 @@ class ShoppingItemEntry {
       categoryId: categoryId,
       categoryName: categoryName,
       itemMasterId: itemMasterId,
-      purchaseDate: clearPurchaseDate ? null : (purchaseDate ?? this.purchaseDate),
+      purchaseDate: clearPurchaseDate
+          ? null
+          : (purchaseDate ?? this.purchaseDate),
       hiragana: hiragana ?? this.hiragana,
     );
   }
@@ -351,3 +359,43 @@ String formatWeekLabel(WeekRange range) {
 String _shortDate(DateTime value) => '${value.month}/${value.day}';
 
 String formatPurchaseDate(DateTime date) => '${date.month}月${date.day}日';
+
+DateTime? usageDateForShoppingItem(
+  ShoppingItemEntry item,
+  WeekRange weekRange,
+) {
+  if (item.section.isDayIndependent ||
+      item.weekday < DateTime.monday ||
+      item.weekday > DateTime.sunday) {
+    return null;
+  }
+
+  return dateOnly(
+    weekRange.start,
+  ).add(Duration(days: item.weekday - DateTime.monday));
+}
+
+String formatPurchaseListDateLabels(
+  ShoppingItemEntry item,
+  WeekRange weekRange,
+) {
+  final labels = <String>[];
+  final purchaseDate = item.purchaseDate;
+  if (purchaseDate != null) {
+    labels.add('購入日:${_formatPurchaseListDate(purchaseDate)}');
+  }
+
+  final usageDate = usageDateForShoppingItem(item, weekRange);
+  if (usageDate != null) {
+    labels.add('使用日:${_formatPurchaseListDate(usageDate)}');
+  }
+
+  return labels.join(' ');
+}
+
+String _formatPurchaseListDate(DateTime date) {
+  const weekdays = ['月', '火', '水', '木', '金', '土', '日'];
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+  return '$month/$day(${weekdays[date.weekday - DateTime.monday]})';
+}

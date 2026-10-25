@@ -29,6 +29,9 @@ Future<void> _seedWeeklyItem(
   required DateTime referenceDate,
   required String categoryName,
   required String itemName,
+  ShoppingSection section = ShoppingSection.morning,
+  DateTime? purchaseDate,
+  int quantity = 1,
 }) async {
   final existingCategories = await (database.select(
     database.categories,
@@ -63,9 +66,10 @@ Future<void> _seedWeeklyItem(
     referenceDate: referenceDate,
     request: AddItemRequest(
       name: itemName,
-      quantity: 1,
-      section: ShoppingSection.morning,
+      quantity: quantity,
+      section: section,
       categoryId: category.id,
+      purchaseDate: purchaseDate,
     ),
   );
 }
@@ -141,78 +145,178 @@ void main() {
     expect(find.text('テスト牛乳'), findsNothing);
   });
 
-  testWidgets('registers an uncategorized purchase item into the item master from a long press', (
+  testWidgets('shows labeled purchase and usage dates in the purchase list', (
     WidgetTester tester,
   ) async {
     final database = AppDatabase(executor: NativeDatabase.memory());
     addTearDown(database.close);
 
-    final mondayDate = _nextWeekStart();
-    final selectedCategory = (await WeeklyShoppingRepository(database).loadCategories()).first;
-
-    await _seedUncategorizedWeeklyItem(
-      database,
-      referenceDate: mondayDate,
-      itemName: 'テスト豆腐',
-    );
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
-        child: const WeeklyBuyerApp(),
-      ),
-    );
-
-    await tester.pumpAndSettle();
-
-    await tester.longPress(find.text('テスト豆腐'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('商品マスターに登録'), findsOneWidget);
-    expect(find.descendant(of: find.byType(BottomSheet), matching: find.text('未分類')), findsNothing);
-
-    await tester.enterText(find.byType(TextField).last, 'とうふ');
-    await tester.tap(find.text('登録'));
-    await tester.pumpAndSettle();
-
-    final itemMaster = (await WeeklyShoppingRepository(database).loadItemMasters())
-        .singleWhere((item) => item.name == 'テスト豆腐');
-    expect(itemMaster.hiragana, 'とうふ');
-    expect(itemMaster.categoryId, selectedCategory.id);
-
-    expect(find.text('商品マスターに登録'), findsNothing);
-    expect(find.text('${selectedCategory.name} 1件'), findsWidgets);
-    expect(find.text('テスト豆腐'), findsOneWidget);
-  });
-
-  testWidgets('does not open the registration flow for categorized purchase rows', (
-    WidgetTester tester,
-  ) async {
-    final database = AppDatabase(executor: NativeDatabase.memory());
-    addTearDown(database.close);
-
+    final weekStart = DateTime(2026, 10, 26);
     await _seedWeeklyItem(
       database,
-      referenceDate: _nextWeekStart(),
+      referenceDate: weekStart,
       categoryName: '食品',
-      itemName: 'テスト牛乳',
+      itemName: '購入日と使用日あり',
+      purchaseDate: DateTime(2026, 10, 25),
+      quantity: 2,
+    );
+    await _seedWeeklyItem(
+      database,
+      referenceDate: weekStart,
+      categoryName: '食品',
+      itemName: '購入日のみ',
+      section: ShoppingSection.other,
+      purchaseDate: DateTime(2026, 10, 25),
     );
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          defaultNextWeekStartProvider.overrideWith((ref) => weekStart),
+          selectedWeekDateProvider.overrideWith((ref) => weekStart),
+        ],
         child: const WeeklyBuyerApp(),
       ),
     );
-
     await tester.pumpAndSettle();
 
-    await tester.longPress(find.text('テスト牛乳'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('商品マスターに登録'), findsNothing);
-    expect(find.text('商品を編集'), findsNothing);
+    expect(find.text('数量 2　購入日:10/25(日) 使用日:10/26(月)'), findsOneWidget);
+    expect(find.text('数量 1　購入日:10/25(日)'), findsOneWidget);
   });
+
+  testWidgets(
+    'shows usage-only dates and omits dates for day-independent items',
+    (WidgetTester tester) async {
+      final database = AppDatabase(executor: NativeDatabase.memory());
+      addTearDown(database.close);
+
+      final weekStart = DateTime(2026, 10, 26);
+      await _seedWeeklyItem(
+        database,
+        referenceDate: weekStart,
+        categoryName: '食品',
+        itemName: '月曜に使用',
+      );
+      await _seedWeeklyItem(
+        database,
+        referenceDate: DateTime(2026, 11, 1),
+        categoryName: '食品',
+        itemName: '日曜に使用',
+      );
+      await _seedWeeklyItem(
+        database,
+        referenceDate: weekStart,
+        categoryName: '食品',
+        itemName: '曜日に依存しない',
+        section: ShoppingSection.other,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(database),
+            defaultNextWeekStartProvider.overrideWith((ref) => weekStart),
+            selectedWeekDateProvider.overrideWith((ref) => weekStart),
+          ],
+          child: const WeeklyBuyerApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('数量 1　使用日:10/26(月)'), findsOneWidget);
+      expect(find.text('数量 1　使用日:11/01(日)'), findsOneWidget);
+      expect(find.text('数量 1'), findsOneWidget);
+      expect(
+        find.textContaining('使用日:', skipOffstage: false),
+        findsNWidgets(2),
+      );
+    },
+  );
+
+  testWidgets(
+    'registers an uncategorized purchase item into the item master from a long press',
+    (WidgetTester tester) async {
+      final database = AppDatabase(executor: NativeDatabase.memory());
+      addTearDown(database.close);
+
+      final mondayDate = _nextWeekStart();
+      final selectedCategory = (await WeeklyShoppingRepository(
+        database,
+      ).loadCategories()).first;
+
+      await _seedUncategorizedWeeklyItem(
+        database,
+        referenceDate: mondayDate,
+        itemName: 'テスト豆腐',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(database)],
+          child: const WeeklyBuyerApp(),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.text('テスト豆腐'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('商品マスターに登録'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('未分類'),
+        ),
+        findsNothing,
+      );
+
+      await tester.enterText(find.byType(TextField).last, 'とうふ');
+      await tester.tap(find.text('登録'));
+      await tester.pumpAndSettle();
+
+      final itemMaster = (await WeeklyShoppingRepository(
+        database,
+      ).loadItemMasters()).singleWhere((item) => item.name == 'テスト豆腐');
+      expect(itemMaster.hiragana, 'とうふ');
+      expect(itemMaster.categoryId, selectedCategory.id);
+
+      expect(find.text('商品マスターに登録'), findsNothing);
+      expect(find.text('${selectedCategory.name} 1件'), findsWidgets);
+      expect(find.text('テスト豆腐'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'does not open the registration flow for categorized purchase rows',
+    (WidgetTester tester) async {
+      final database = AppDatabase(executor: NativeDatabase.memory());
+      addTearDown(database.close);
+
+      await _seedWeeklyItem(
+        database,
+        referenceDate: _nextWeekStart(),
+        categoryName: '食品',
+        itemName: 'テスト牛乳',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(database)],
+          child: const WeeklyBuyerApp(),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      await tester.longPress(find.text('テスト牛乳'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('商品マスターに登録'), findsNothing);
+      expect(find.text('商品を編集'), findsNothing);
+    },
+  );
 
   testWidgets('shows only items for the selected weekday', (
     WidgetTester tester,
@@ -305,7 +409,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final bottomSheet = find.byType(BottomSheet);
-    final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
+    final sheetTextFields = find.descendant(
+      of: bottomSheet,
+      matching: find.byType(TextField),
+    );
     await tester.enterText(sheetTextFields.at(0), 'テスト豆腐');
     await tester.enterText(sheetTextFields.at(1), '2');
     await repository.addItem(
@@ -399,58 +506,68 @@ void main() {
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
-  testWidgets('shows candidate items when searching by hiragana and keeps each match unique', (
-    WidgetTester tester,
-  ) async {
-    final database = AppDatabase(executor: NativeDatabase.memory());
-    addTearDown(database.close);
+  testWidgets(
+    'shows candidate items when searching by hiragana and keeps each match unique',
+    (WidgetTester tester) async {
+      final database = AppDatabase(executor: NativeDatabase.memory());
+      addTearDown(database.close);
 
-    final categoryRow = await database.into(database.categories).insertReturning(
-          CategoriesCompanion.insert(
-            name: '検索カテゴリ',
-            sortOrder: const drift.Value(0),
-          ),
-        );
-    await database.into(database.itemMasters).insert(
-          ItemMastersCompanion.insert(
-            name: '牛乳',
-            hiragana: const drift.Value('ぎゅうにゅう'),
-            categoryId: drift.Value(categoryRow.id),
-            defaultQuantity: const drift.Value(1),
-          ),
-        );
-    await database.into(database.itemMasters).insert(
-          ItemMastersCompanion.insert(
-            name: 'たまご',
-            hiragana: const drift.Value('たまご'),
-            categoryId: drift.Value(categoryRow.id),
-            defaultQuantity: const drift.Value(1),
-          ),
-        );
+      final categoryRow = await database
+          .into(database.categories)
+          .insertReturning(
+            CategoriesCompanion.insert(
+              name: '検索カテゴリ',
+              sortOrder: const drift.Value(0),
+            ),
+          );
+      await database
+          .into(database.itemMasters)
+          .insert(
+            ItemMastersCompanion.insert(
+              name: '牛乳',
+              hiragana: const drift.Value('ぎゅうにゅう'),
+              categoryId: drift.Value(categoryRow.id),
+              defaultQuantity: const drift.Value(1),
+            ),
+          );
+      await database
+          .into(database.itemMasters)
+          .insert(
+            ItemMastersCompanion.insert(
+              name: 'たまご',
+              hiragana: const drift.Value('たまご'),
+              categoryId: drift.Value(categoryRow.id),
+              defaultQuantity: const drift.Value(1),
+            ),
+          );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
-        child: const WeeklyBuyerApp(),
-      ),
-    );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(database)],
+          child: const WeeklyBuyerApp(),
+        ),
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('商品追加'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('商品追加'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('商品を追加'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('商品を追加'));
+      await tester.pumpAndSettle();
 
-    final bottomSheet = find.byType(BottomSheet);
-    final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
-    await tester.enterText(sheetTextFields.at(0), 'ぎゅう');
-    await tester.pumpAndSettle();
+      final bottomSheet = find.byType(BottomSheet);
+      final sheetTextFields = find.descendant(
+        of: bottomSheet,
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(sheetTextFields.at(0), 'ぎゅう');
+      await tester.pumpAndSettle();
 
-    expect(find.text('牛乳'), findsAtLeastNWidgets(1));
-    expect(find.text('たまご'), findsNothing);
-  });
+      expect(find.text('牛乳'), findsAtLeastNWidgets(1));
+      expect(find.text('たまご'), findsNothing);
+    },
+  );
 
   testWidgets('shows weekday-only labels in weekday selector', (
     WidgetTester tester,
@@ -508,8 +625,8 @@ void main() {
     await tester.enterText(find.byType(TextField).last, '夫は夕飯いらない');
     await tester.pumpAndSettle();
 
-  expect(find.text('クリア'), findsNothing);
-  expect(find.text('保存'), findsNothing);
+    expect(find.text('クリア'), findsNothing);
+    expect(find.text('保存'), findsNothing);
 
     await tester.tap(find.text('購入リスト').last);
     await tester.pumpAndSettle();
@@ -519,36 +636,37 @@ void main() {
     expect(find.text('夫は夕飯いらない'), findsWidgets);
   });
 
-  testWidgets('shows meal menu add buttons and saves entries under the matching section', (
-    WidgetTester tester,
-  ) async {
-    final database = AppDatabase(executor: NativeDatabase.memory());
-    addTearDown(database.close);
+  testWidgets(
+    'shows meal menu add buttons and saves entries under the matching section',
+    (WidgetTester tester) async {
+      final database = AppDatabase(executor: NativeDatabase.memory());
+      addTearDown(database.close);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
-        child: const WeeklyBuyerApp(),
-      ),
-    );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(database)],
+          child: const WeeklyBuyerApp(),
+        ),
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('商品追加'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('商品追加'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('料理メニュー追加'), findsWidgets);
+      expect(find.text('料理メニュー追加'), findsWidgets);
 
-    await tester.tap(find.text('料理メニュー追加').first);
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('料理メニュー追加').first);
+      await tester.pumpAndSettle();
 
-    expect(find.text('朝の料理メニュー追加'), findsOneWidget);
-    await tester.enterText(find.byType(TextField).first, 'トースト');
-    await tester.tap(find.text('登録する'));
-    await tester.pumpAndSettle();
+      expect(find.text('朝の料理メニュー追加'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).first, 'トースト');
+      await tester.tap(find.text('登録する'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('トースト'), findsOneWidget);
-  });
+      expect(find.text('トースト'), findsOneWidget);
+    },
+  );
 
   testWidgets('cancels meal-menu add sheet without saving', (
     WidgetTester tester,
@@ -604,29 +722,32 @@ void main() {
 
     final hiddenRepository = WeeklyShoppingRepository(database);
     expect(
-      (await hiddenRepository.loadMealMenuEntries(DateTime(2026, 4, 20))).single.menuText,
+      (await hiddenRepository.loadMealMenuEntries(
+        DateTime(2026, 4, 20),
+      )).single.menuText,
       'カレー',
     );
   });
 
-  testWidgets('does not show private memo content on the purchase list screen', (
-    WidgetTester tester,
-  ) async {
-    final database = AppDatabase(executor: NativeDatabase.memory());
-    addTearDown(database.close);
+  testWidgets(
+    'does not show private memo content on the purchase list screen',
+    (WidgetTester tester) async {
+      final database = AppDatabase(executor: NativeDatabase.memory());
+      addTearDown(database.close);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
-        child: const WeeklyBuyerApp(),
-      ),
-    );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(database)],
+          child: const WeeklyBuyerApp(),
+        ),
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    expect(find.text('私用メモ'), findsNothing);
-    expect(find.text('夫は夕飯いらない'), findsNothing);
-  });
+      expect(find.text('私用メモ'), findsNothing);
+      expect(find.text('夫は夕飯いらない'), findsNothing);
+    },
+  );
 
   testWidgets('opens the item-add screen on next calendar week', (
     WidgetTester tester,
@@ -680,7 +801,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final bottomSheet = find.byType(BottomSheet);
-    final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
+    final sheetTextFields = find.descendant(
+      of: bottomSheet,
+      matching: find.byType(TextField),
+    );
     await tester.enterText(sheetTextFields.at(0), 'テスト豆腐');
     await tester.enterText(sheetTextFields.at(1), '2');
 
@@ -700,46 +824,56 @@ void main() {
     );
   });
 
-  testWidgets('fills the product-name field from voice input and keeps it editable', (
-    WidgetTester tester,
-  ) async {
-    final database = AppDatabase(executor: NativeDatabase.memory());
-    addTearDown(database.close);
+  testWidgets(
+    'fills the product-name field from voice input and keeps it editable',
+    (WidgetTester tester) async {
+      final database = AppDatabase(executor: NativeDatabase.memory());
+      addTearDown(database.close);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          appDatabaseProvider.overrideWithValue(database),
-          productNameVoiceInputServiceProvider.overrideWithValue(
-            FakeProductNameVoiceInputService('音声りんご'),
-          ),
-        ],
-        child: const WeeklyBuyerApp(),
-      ),
-    );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(database),
+            productNameVoiceInputServiceProvider.overrideWithValue(
+              FakeProductNameVoiceInputService('音声りんご'),
+            ),
+          ],
+          child: const WeeklyBuyerApp(),
+        ),
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('商品追加'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('商品追加'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('商品を追加'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('商品を追加'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('商品名を音声入力'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('商品名を音声入力'));
+      await tester.pumpAndSettle();
 
-    final bottomSheet = find.byType(BottomSheet);
-    final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
-    final nameField = sheetTextFields.at(0);
+      final bottomSheet = find.byType(BottomSheet);
+      final sheetTextFields = find.descendant(
+        of: bottomSheet,
+        matching: find.byType(TextField),
+      );
+      final nameField = sheetTextFields.at(0);
 
-    expect(tester.widget<TextField>(nameField).controller?.text ?? '', '音声りんご');
+      expect(
+        tester.widget<TextField>(nameField).controller?.text ?? '',
+        '音声りんご',
+      );
 
-    await tester.enterText(nameField, '音声りんご（修正）');
-    await tester.pumpAndSettle();
+      await tester.enterText(nameField, '音声りんご（修正）');
+      await tester.pumpAndSettle();
 
-    expect(tester.widget<TextField>(nameField).controller?.text ?? '', '音声りんご（修正）');
-  });
+      expect(
+        tester.widget<TextField>(nameField).controller?.text ?? '',
+        '音声りんご（修正）',
+      );
+    },
+  );
 
   testWidgets('keeps manual product-name text when voice input is canceled', (
     WidgetTester tester,
@@ -768,7 +902,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final bottomSheet = find.byType(BottomSheet);
-    final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
+    final sheetTextFields = find.descendant(
+      of: bottomSheet,
+      matching: find.byType(TextField),
+    );
     final nameField = sheetTextFields.at(0);
 
     await tester.enterText(nameField, '手入力途中');
@@ -807,7 +944,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final bottomSheet = find.byType(BottomSheet);
-    final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
+    final sheetTextFields = find.descendant(
+      of: bottomSheet,
+      matching: find.byType(TextField),
+    );
     final nameField = sheetTextFields.at(0);
     final quantityField = sheetTextFields.at(1);
 
@@ -830,88 +970,104 @@ void main() {
     );
   });
 
-  testWidgets('keeps the item add form open across repeated continue-add saves', (
-    WidgetTester tester,
-  ) async {
-    final database = AppDatabase(executor: NativeDatabase.memory());
-    addTearDown(database.close);
+  testWidgets(
+    'keeps the item add form open across repeated continue-add saves',
+    (WidgetTester tester) async {
+      final database = AppDatabase(executor: NativeDatabase.memory());
+      addTearDown(database.close);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
-        child: const WeeklyBuyerApp(),
-      ),
-    );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(database)],
+          child: const WeeklyBuyerApp(),
+        ),
+      );
 
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('商品追加'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('商品を追加'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('次も登録'), findsOneWidget);
-    expect(find.text('保存して続けて入力できます'), findsOneWidget);
-
-    Future<void> enterAndContinue(String name, String quantity) async {
-      final bottomSheet = find.byType(BottomSheet);
-      final sheetTextFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
-      await tester.enterText(sheetTextFields.at(0), name);
-      await tester.enterText(sheetTextFields.at(1), quantity);
-      await tester.tap(find.text('次も登録'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(BottomSheet), findsOneWidget);
-      final currentFields = find.descendant(of: bottomSheet, matching: find.byType(TextField));
-      expect(tester.widget<TextField>(currentFields.at(0)).controller?.text ?? '', isEmpty);
-      expect(tester.widget<TextField>(currentFields.at(1)).controller?.text ?? '', isEmpty);
-    }
+      await tester.tap(find.text('商品追加'));
+      await tester.pumpAndSettle();
 
-    await enterAndContinue('テスト豆腐', '1');
-    await enterAndContinue('テスト卵', '2');
-    await enterAndContinue('テスト牛乳', '3');
+      await tester.tap(find.text('商品を追加'));
+      await tester.pumpAndSettle();
 
-    final repository = WeeklyShoppingRepository(database);
-    final savedWeek = await repository.loadWeek(_nextWeekStart());
-    final morningItems = savedWeek.weekdaySections
-        .firstWhere((section) => section.section == ShoppingSection.morning)
-        .items;
+      expect(find.text('次も登録'), findsOneWidget);
+      expect(find.text('保存して続けて入力できます'), findsOneWidget);
 
-    expect(morningItems.any((item) => item.name == 'テスト豆腐'), isTrue);
-    expect(morningItems.any((item) => item.name == 'テスト卵'), isTrue);
-    expect(morningItems.any((item) => item.name == 'テスト牛乳'), isTrue);
-    expect(find.text('次も登録'), findsOneWidget);
-    expect(find.text('保存して続けて入力できます'), findsOneWidget);
-  });
+      Future<void> enterAndContinue(String name, String quantity) async {
+        final bottomSheet = find.byType(BottomSheet);
+        final sheetTextFields = find.descendant(
+          of: bottomSheet,
+          matching: find.byType(TextField),
+        );
+        await tester.enterText(sheetTextFields.at(0), name);
+        await tester.enterText(sheetTextFields.at(1), quantity);
+        await tester.tap(find.text('次も登録'));
+        await tester.pumpAndSettle();
 
-  testWidgets('shows the continue-add button beside the item-name and quantity controls', (
-    WidgetTester tester,
-  ) async {
-    final database = AppDatabase(executor: NativeDatabase.memory());
-    addTearDown(database.close);
+        expect(find.byType(BottomSheet), findsOneWidget);
+        final currentFields = find.descendant(
+          of: bottomSheet,
+          matching: find.byType(TextField),
+        );
+        expect(
+          tester.widget<TextField>(currentFields.at(0)).controller?.text ?? '',
+          isEmpty,
+        );
+        expect(
+          tester.widget<TextField>(currentFields.at(1)).controller?.text ?? '',
+          isEmpty,
+        );
+      }
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
-        child: const WeeklyBuyerApp(),
-      ),
-    );
+      await enterAndContinue('テスト豆腐', '1');
+      await enterAndContinue('テスト卵', '2');
+      await enterAndContinue('テスト牛乳', '3');
 
-    await tester.pumpAndSettle();
+      final repository = WeeklyShoppingRepository(database);
+      final savedWeek = await repository.loadWeek(_nextWeekStart());
+      final morningItems = savedWeek.weekdaySections
+          .firstWhere((section) => section.section == ShoppingSection.morning)
+          .items;
 
-    await tester.tap(find.text('商品追加'));
-    await tester.pumpAndSettle();
+      expect(morningItems.any((item) => item.name == 'テスト豆腐'), isTrue);
+      expect(morningItems.any((item) => item.name == 'テスト卵'), isTrue);
+      expect(morningItems.any((item) => item.name == 'テスト牛乳'), isTrue);
+      expect(find.text('次も登録'), findsOneWidget);
+      expect(find.text('保存して続けて入力できます'), findsOneWidget);
+    },
+  );
 
-    await tester.tap(find.text('商品を追加'));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'shows the continue-add button beside the item-name and quantity controls',
+    (WidgetTester tester) async {
+      final database = AppDatabase(executor: NativeDatabase.memory());
+      addTearDown(database.close);
 
-    expect(find.text('次も登録'), findsOneWidget);
-    expect(find.text('保存して続けて入力できます'), findsOneWidget);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(database)],
+          child: const WeeklyBuyerApp(),
+        ),
+      );
 
-    final continueButton = tester.widget<FilledButton>(find.widgetWithText(FilledButton, '次も登録'));
-    expect(continueButton.onPressed, isNotNull);
-  });
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('商品追加'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('商品を追加'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('次も登録'), findsOneWidget);
+      expect(find.text('保存して続けて入力できます'), findsOneWidget);
+
+      final continueButton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, '次も登録'),
+      );
+      expect(continueButton.onPressed, isNotNull);
+    },
+  );
 
   testWidgets(
     'switches destinations without losing the active week selection',
@@ -958,144 +1114,219 @@ void main() {
     },
   );
 
-  testWidgets('moves to a prior week and returns to the next-week default view', (
-    WidgetTester tester,
-  ) async {
-    final database = AppDatabase(executor: NativeDatabase.memory());
-    addTearDown(database.close);
+  testWidgets(
+    'moves to a prior week and returns to the next-week default view',
+    (WidgetTester tester) async {
+      final database = AppDatabase(executor: NativeDatabase.memory());
+      addTearDown(database.close);
 
-    final nextWeekStart = _nextWeekStart();
-    final previousWeekStart = nextWeekStart.subtract(const Duration(days: 7));
-    final twoWeeksBackStart = nextWeekStart.subtract(const Duration(days: 14));
-    final threeWeeksBackStart = nextWeekStart.subtract(const Duration(days: 21));
+      final nextWeekStart = _nextWeekStart();
+      final previousWeekStart = nextWeekStart.subtract(const Duration(days: 7));
+      final twoWeeksBackStart = nextWeekStart.subtract(
+        const Duration(days: 14),
+      );
+      final threeWeeksBackStart = nextWeekStart.subtract(
+        const Duration(days: 21),
+      );
 
-    await _seedWeeklyItem(
-      database,
-      referenceDate: nextWeekStart,
-      categoryName: '食品',
-      itemName: '今週牛乳',
-    );
-    await _seedWeeklyItem(
-      database,
-      referenceDate: previousWeekStart,
-      categoryName: '食品',
-      itemName: '先週牛乳',
-    );
-    await _seedWeeklyItem(
-      database,
-      referenceDate: twoWeeksBackStart,
-      categoryName: '食品',
-      itemName: '2週間前豆腐',
-    );
-    await _seedWeeklyItem(
-      database,
-      referenceDate: threeWeeksBackStart,
-      categoryName: '食品',
-      itemName: '3週間前みそ',
-    );
+      await _seedWeeklyItem(
+        database,
+        referenceDate: nextWeekStart,
+        categoryName: '食品',
+        itemName: '今週牛乳',
+      );
+      await _seedWeeklyItem(
+        database,
+        referenceDate: previousWeekStart,
+        categoryName: '食品',
+        itemName: '先週牛乳',
+      );
+      await _seedWeeklyItem(
+        database,
+        referenceDate: twoWeeksBackStart,
+        categoryName: '食品',
+        itemName: '2週間前豆腐',
+      );
+      await _seedWeeklyItem(
+        database,
+        referenceDate: threeWeeksBackStart,
+        categoryName: '食品',
+        itemName: '3週間前みそ',
+      );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
-        child: const WeeklyBuyerApp(),
-      ),
-    );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(database)],
+          child: const WeeklyBuyerApp(),
+        ),
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('商品追加'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('商品追加'));
+      await tester.pumpAndSettle();
 
-    expect(find.text(formatWeekLabel(WeekRange(start: nextWeekStart, end: nextWeekStart.add(const Duration(days: 6))))), findsOneWidget);
-    expect(find.text('参照中'), findsNothing);
+      expect(
+        find.text(
+          formatWeekLabel(
+            WeekRange(
+              start: nextWeekStart,
+              end: nextWeekStart.add(const Duration(days: 6)),
+            ),
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('参照中'), findsNothing);
 
-    await tester.tap(find.text('前の週'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('前の週'));
+      await tester.pumpAndSettle();
 
-    expect(find.text(formatWeekLabel(WeekRange(start: previousWeekStart, end: previousWeekStart.add(const Duration(days: 6))))), findsOneWidget);
-    expect(find.text('参照中'), findsOneWidget);
-    expect(find.text('前の週を表示中のため、表示のみになります。'), findsOneWidget);
-    expect(find.text('先週牛乳'), findsOneWidget);
-    expect(find.text('今週牛乳'), findsNothing);
+      expect(
+        find.text(
+          formatWeekLabel(
+            WeekRange(
+              start: previousWeekStart,
+              end: previousWeekStart.add(const Duration(days: 6)),
+            ),
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('参照中'), findsOneWidget);
+      expect(find.text('前の週を表示中のため、表示のみになります。'), findsOneWidget);
+      expect(find.text('先週牛乳'), findsOneWidget);
+      expect(find.text('今週牛乳'), findsNothing);
 
-    await tester.tap(find.text('前の週'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('前の週'));
+      await tester.pumpAndSettle();
 
-    expect(find.text(formatWeekLabel(WeekRange(start: twoWeeksBackStart, end: twoWeeksBackStart.add(const Duration(days: 6))))), findsOneWidget);
-    expect(find.text('2週間前豆腐'), findsOneWidget);
-    expect(find.text('先週牛乳'), findsNothing);
+      expect(
+        find.text(
+          formatWeekLabel(
+            WeekRange(
+              start: twoWeeksBackStart,
+              end: twoWeeksBackStart.add(const Duration(days: 6)),
+            ),
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('2週間前豆腐'), findsOneWidget);
+      expect(find.text('先週牛乳'), findsNothing);
 
-    await tester.tap(find.text('前の週'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('前の週'));
+      await tester.pumpAndSettle();
 
-    expect(find.text(formatWeekLabel(WeekRange(start: threeWeeksBackStart, end: threeWeeksBackStart.add(const Duration(days: 6))))), findsOneWidget);
-    expect(find.text('3週間前みそ'), findsOneWidget);
-    expect(find.text('2週間前豆腐'), findsNothing);
+      expect(
+        find.text(
+          formatWeekLabel(
+            WeekRange(
+              start: threeWeeksBackStart,
+              end: threeWeeksBackStart.add(const Duration(days: 6)),
+            ),
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('3週間前みそ'), findsOneWidget);
+      expect(find.text('2週間前豆腐'), findsNothing);
 
-    final addButton = tester.widget<FilledButton>(find.widgetWithText(FilledButton, '商品を追加'));
-    expect(addButton.onPressed, isNull);
+      final addButton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, '商品を追加'),
+      );
+      expect(addButton.onPressed, isNull);
 
-    final mealButtons = tester.widgetList<TextButton>(find.widgetWithText(TextButton, '料理メニュー追加')).toList();
-    expect(mealButtons, isNotEmpty);
-    expect(mealButtons.every((button) => button.onPressed == null), isTrue);
+      final mealButtons = tester
+          .widgetList<TextButton>(find.widgetWithText(TextButton, '料理メニュー追加'))
+          .toList();
+      expect(mealButtons, isNotEmpty);
+      expect(mealButtons.every((button) => button.onPressed == null), isTrue);
 
-    final deleteButtons = tester.widgetList<IconButton>(find.widgetWithIcon(IconButton, Icons.close_rounded)).toList();
-    expect(deleteButtons, isNotEmpty);
-    expect(deleteButtons.every((button) => button.onPressed == null), isTrue);
+      final deleteButtons = tester
+          .widgetList<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.close_rounded),
+          )
+          .toList();
+      expect(deleteButtons, isNotEmpty);
+      expect(deleteButtons.every((button) => button.onPressed == null), isTrue);
 
-    await tester.tap(find.text('次週に戻る'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('次週に戻る'));
+      await tester.pumpAndSettle();
 
-    expect(find.text(formatWeekLabel(WeekRange(start: nextWeekStart, end: nextWeekStart.add(const Duration(days: 6))))), findsOneWidget);
-    expect(find.text('参照中'), findsNothing);
-    expect(find.text('今週牛乳'), findsOneWidget);
+      expect(
+        find.text(
+          formatWeekLabel(
+            WeekRange(
+              start: nextWeekStart,
+              end: nextWeekStart.add(const Duration(days: 6)),
+            ),
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('参照中'), findsNothing);
+      expect(find.text('今週牛乳'), findsOneWidget);
 
-    final enabledAddButton = tester.widget<FilledButton>(find.widgetWithText(FilledButton, '商品を追加'));
-    expect(enabledAddButton.onPressed, isNotNull);
-  });
+      final enabledAddButton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, '商品を追加'),
+      );
+      expect(enabledAddButton.onPressed, isNotNull);
+    },
+  );
 
-  testWidgets('keeps the purchase list read-only when a prior week is selected', (
-    WidgetTester tester,
-  ) async {
-    final database = AppDatabase(executor: NativeDatabase.memory());
-    addTearDown(database.close);
+  testWidgets(
+    'keeps the purchase list read-only when a prior week is selected',
+    (WidgetTester tester) async {
+      final database = AppDatabase(executor: NativeDatabase.memory());
+      addTearDown(database.close);
 
-    final nextWeekStart = _nextWeekStart();
-    final previousWeekStart = nextWeekStart.subtract(const Duration(days: 7));
+      final nextWeekStart = _nextWeekStart();
+      final previousWeekStart = nextWeekStart.subtract(const Duration(days: 7));
 
-    await _seedWeeklyItem(
-      database,
-      referenceDate: previousWeekStart,
-      categoryName: '食品',
-      itemName: '先週牛乳',
-    );
+      await _seedWeeklyItem(
+        database,
+        referenceDate: previousWeekStart,
+        categoryName: '食品',
+        itemName: '先週牛乳',
+      );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
-        child: const WeeklyBuyerApp(),
-      ),
-    );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(database)],
+          child: const WeeklyBuyerApp(),
+        ),
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('商品追加'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('前の週'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('商品追加'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('前の週'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('購入リスト'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('購入リスト'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('前の週を表示中のため、購入リストは表示のみです。'), findsOneWidget);
-    expect(find.byType(Dismissible), findsNothing);
-    expect(find.text('先週牛乳'), findsOneWidget);
+      expect(find.text('前の週を表示中のため、購入リストは表示のみです。'), findsOneWidget);
+      expect(find.byType(Dismissible), findsNothing);
+      expect(find.text('先週牛乳'), findsOneWidget);
 
-    final purchaseButtons = tester.widgetList<IconButton>(find.widgetWithIcon(IconButton, Icons.check_circle_outline)).toList();
-    expect(purchaseButtons, isNotEmpty);
-    expect(purchaseButtons.every((button) => button.onPressed == null), isTrue);
+      final purchaseButtons = tester
+          .widgetList<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.check_circle_outline),
+          )
+          .toList();
+      expect(purchaseButtons, isNotEmpty);
+      expect(
+        purchaseButtons.every((button) => button.onPressed == null),
+        isTrue,
+      );
 
-    final bannerButtons = tester.widgetList<TextButton>(find.widgetWithText(TextButton, '元に戻す')).toList();
-    expect(bannerButtons, isEmpty);
-  });
+      final bannerButtons = tester
+          .widgetList<TextButton>(find.widgetWithText(TextButton, '元に戻す'))
+          .toList();
+      expect(bannerButtons, isEmpty);
+    },
+  );
 }
