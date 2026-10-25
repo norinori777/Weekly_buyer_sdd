@@ -634,6 +634,97 @@ void main() {
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
+  Future<void> pumpAddScreenWithPurchasedItem(
+    WidgetTester tester,
+    AppDatabase database,
+  ) async {
+    final mondayDate = _nextWeekStart();
+    await _seedWeeklyItem(
+      database,
+      referenceDate: mondayDate,
+      categoryName: '食品',
+      itemName: 'テスト長押し対象',
+    );
+    await _seedWeeklyItem(
+      database,
+      referenceDate: mondayDate,
+      categoryName: '食品',
+      itemName: 'テスト未購入',
+    );
+    final target = await (database.select(
+      database.weeklyListItems,
+    )..where((t) => t.itemName.equals('テスト長押し対象'))).getSingle();
+    await WeeklyShoppingRepository(database).togglePurchased(target.id);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('商品追加'));
+    await tester.pumpAndSettle();
+  }
+
+  Future<bool> isTargetPurchased(AppDatabase database) async {
+    final row = await (database.select(
+      database.weeklyListItems,
+    )..where((t) => t.itemName.equals('テスト長押し対象'))).getSingle();
+    return row.isPurchased;
+  }
+
+  testWidgets('unmarks a purchased item after confirming a long press', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+    await pumpAddScreenWithPurchasedItem(tester, database);
+
+    await tester.longPress(find.text('テスト長押し対象'));
+    await tester.pumpAndSettle();
+    expect(find.text('購入済みを解除しますか？'), findsOneWidget);
+
+    await tester.tap(find.text('はい'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('購入済みを解除しますか？'), findsNothing);
+    expect(await isTargetPurchased(database), isFalse);
+  });
+
+  testWidgets('keeps the purchased state when the prompt is cancelled', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+    await pumpAddScreenWithPurchasedItem(tester, database);
+
+    await tester.longPress(find.text('テスト長押し対象'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('いいえ'));
+    await tester.pumpAndSettle();
+    expect(await isTargetPurchased(database), isTrue);
+
+    await tester.longPress(find.text('テスト長押し対象'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
+    expect(find.text('購入済みを解除しますか？'), findsNothing);
+    expect(await isTargetPurchased(database), isTrue);
+  });
+
+  testWidgets('does not prompt when long pressing an unpurchased item', (
+    WidgetTester tester,
+  ) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+    await pumpAddScreenWithPurchasedItem(tester, database);
+
+    await tester.longPress(find.text('テスト未購入'));
+    await tester.pumpAndSettle();
+    expect(find.text('購入済みを解除しますか？'), findsNothing);
+  });
+
   testWidgets(
     'shows candidate items when searching by hiragana and keeps each match unique',
     (WidgetTester tester) async {
