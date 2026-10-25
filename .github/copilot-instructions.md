@@ -1,4 +1,4 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
-shell commands, and other important information, read [specs/029-usage-date-display/plan.md](specs/029-usage-date-display/plan.md)
+shell commands, and other important information, read [specs/030-purchase-undo-notice/plan.md](specs/030-purchase-undo-notice/plan.md)
 <!-- SPECKIT END -->

@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' as drift;
+﻿import 'package:drift/drift.dart' as drift;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -145,6 +145,134 @@ void main() {
     expect(find.text('テスト牛乳'), findsNothing);
   });
 
+  Future<AppDatabase> pumpPurchaseApp(WidgetTester tester) async {
+    final database = AppDatabase(executor: NativeDatabase.memory());
+    addTearDown(database.close);
+
+    final selectedDate = _nextWeekStart();
+    await _seedWeeklyItem(
+      database,
+      referenceDate: selectedDate,
+      categoryName: '食品',
+      itemName: 'テスト牛乳',
+    );
+    await _seedWeeklyItem(
+      database,
+      referenceDate: selectedDate,
+      categoryName: '食品',
+      itemName: 'テストパン',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const WeeklyBuyerApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    return database;
+  }
+
+  Future<void> purchaseFirstItem(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('購入済みにする').first);
+    await tester.pump();
+    await tester.pump();
+  }
+
+  testWidgets('shows a single undo notice without a snack bar after purchase', (
+    WidgetTester tester,
+  ) async {
+    await pumpPurchaseApp(tester);
+
+    await purchaseFirstItem(tester);
+
+    expect(find.byType(SnackBar), findsNothing);
+    expect(find.text('元に戻す'), findsOneWidget);
+    expect(find.textContaining('を購入済みにしました'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('hides the undo notice after three seconds', (
+    WidgetTester tester,
+  ) async {
+    final database = await pumpPurchaseApp(tester);
+
+    await purchaseFirstItem(tester);
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('元に戻す'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    expect(find.text('元に戻す'), findsNothing);
+    final purchased = await (database.select(
+      database.weeklyListItems,
+    )..where((table) => table.isPurchased.equals(true))).get();
+    expect(purchased, hasLength(1));
+  });
+
+  testWidgets('replaces the notice and restarts the timer on consecutive purchases', (
+    WidgetTester tester,
+  ) async {
+    await pumpPurchaseApp(tester);
+
+    await purchaseFirstItem(tester);
+    final firstText = tester
+        .widget<Text>(find.textContaining('を購入済みにしました'))
+        .data;
+    await tester.pump(const Duration(seconds: 2));
+
+    await purchaseFirstItem(tester);
+    expect(find.textContaining('を購入済みにしました'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.textContaining('を購入済みにしました')).data,
+      isNot(firstText),
+    );
+
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('元に戻す'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    expect(find.text('元に戻す'), findsNothing);
+  });
+
+  testWidgets('undo within three seconds restores the item and hides the notice', (
+    WidgetTester tester,
+  ) async {
+    final database = await pumpPurchaseApp(tester);
+
+    await purchaseFirstItem(tester);
+    await tester.tap(find.text('元に戻す'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('元に戻す'), findsNothing);
+    final purchased = await (database.select(
+      database.weeklyListItems,
+    )..where((table) => table.isPurchased.equals(true))).get();
+    expect(purchased, isEmpty);
+  });
+
+  testWidgets('hides the undo notice when switching destinations', (
+    WidgetTester tester,
+  ) async {
+    final database = await pumpPurchaseApp(tester);
+
+    await purchaseFirstItem(tester);
+    expect(find.text('元に戻す'), findsOneWidget);
+
+    await tester.tap(find.text('商品追加').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('購入リスト').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('元に戻す'), findsNothing);
+    expect(find.textContaining('を購入済みにしました'), findsNothing);
+    final purchased = await (database.select(
+      database.weeklyListItems,
+    )..where((table) => table.isPurchased.equals(true))).get();
+    expect(purchased, hasLength(1));
+  });
   testWidgets('shows labeled purchase and usage dates in the purchase list', (
     WidgetTester tester,
   ) async {
