@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/widgets/weekly_buyer_brand_icon.dart';
 import '../domain/weekly_shopping_models.dart';
 import 'item_editor_destination.dart';
-import 'weekly_shopping_page.dart' show UndoBanner;
+import 'weekly_shopping_page.dart' show PurchaseUndoNoticeHost;
 
 class PurchaseListDestination extends ConsumerWidget {
   const PurchaseListDestination({super.key});
@@ -15,32 +15,18 @@ class PurchaseListDestination extends ConsumerWidget {
     final selectedDate = ref.watch(selectedWeekDateProvider);
     final isReadOnly = ref.watch(isPriorWeekViewProvider);
     final snapshot = ref.watch(weeklyShoppingSnapshotProvider(selectedDate));
-    final bottomBanner = snapshot.maybeWhen(
-      data: (data) {
-        if (isReadOnly) {
-          return const SizedBox.shrink();
-        }
-        if (data.hiddenPurchasedCount == 0 && data.lastPurchasedItem == null) {
-          return const SizedBox.shrink();
-        }
-
-        return SafeArea(
-          minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: UndoBanner(
-            hiddenPurchasedCount: data.hiddenPurchasedCount,
-            lastPurchasedItem: data.lastPurchasedItem,
+    final notice = ref.watch(purchaseUndoNoticeProvider);
+    final bottomBanner = isReadOnly
+        ? const SizedBox.shrink()
+        : PurchaseUndoNoticeHost(
+            hiddenPurchasedCount: snapshot.valueOrNull?.hiddenPurchasedCount ?? 0,
             onUndo: () async {
               await ref
                   .read(weeklyShoppingRepositoryProvider)
                   .undoLatestPurchase(selectedDate);
               ref.invalidate(weeklyShoppingSnapshotProvider(selectedDate));
             },
-          ),
-        );
-      },
-      orElse: () => const SizedBox.shrink(),
-    );
-
+          );
     return Scaffold(
       appBar: AppBar(
         title: const Row(
@@ -61,9 +47,7 @@ class PurchaseListDestination extends ConsumerWidget {
           ),
         ),
         data: (data) {
-          final showBottomBanner =
-              !isReadOnly &&
-              (data.hiddenPurchasedCount > 0 || data.lastPurchasedItem != null);
+          final showBottomBanner = !isReadOnly && notice != null;
 
           return ListView(
             padding: EdgeInsets.fromLTRB(
@@ -97,7 +81,6 @@ class PurchaseListDestination extends ConsumerWidget {
                     if (isReadOnly) {
                       return;
                     }
-                    final messenger = ScaffoldMessenger.of(context);
                     await ref
                         .read(weeklyShoppingRepositoryProvider)
                         .togglePurchased(item.id);
@@ -107,24 +90,11 @@ class PurchaseListDestination extends ConsumerWidget {
                     if (!context.mounted) {
                       return;
                     }
-                    messenger
-                      ..clearSnackBars()
-                      ..showSnackBar(
-                        SnackBar(
-                          content: Text('${item.name} を購入済みにしました'),
-                          action: SnackBarAction(
-                            label: '元に戻す',
-                            onPressed: () async {
-                              await ref
-                                  .read(weeklyShoppingRepositoryProvider)
-                                  .undoLatestPurchase(selectedDate);
-                              ref.invalidate(
-                                weeklyShoppingSnapshotProvider(selectedDate),
-                              );
-                            },
-                          ),
-                        ),
-                      );
+                    ref.read(purchaseUndoNoticeProvider.notifier).state =
+                        PurchaseUndoNotice(
+                          itemName: item.name,
+                          createdAt: DateTime.now(),
+                        );
                   },
                 ),
                 const SizedBox(height: 12),

@@ -77,6 +77,17 @@ final previousShoppingDestinationProvider = StateProvider<MainShellDestination>(
 	return MainShellDestination.purchaseList;
 });
 
+class PurchaseUndoNotice {
+	const PurchaseUndoNotice({required this.itemName, required this.createdAt});
+
+	final String itemName;
+	final DateTime createdAt;
+}
+
+final purchaseUndoNoticeProvider = StateProvider<PurchaseUndoNotice?>((ref) {
+	return null;
+});
+
 final defaultNextWeekStartProvider = Provider<DateTime>((ref) {
 	return startOfNextWeek(DateTime.now());
 });
